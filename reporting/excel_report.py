@@ -50,8 +50,8 @@ def record_test_case(test_case: dict[str, Any], status: str, actual_result: str)
     assert _report_path is not None
     assert _execution_timestamp is not None
     workbook = load_workbook(_report_path) if _report_path.exists() else Workbook()
-    _remove_empty_default_sheet(workbook)
     worksheet = workbook[test_case["module"]] if test_case["module"] in workbook.sheetnames else workbook.create_sheet(test_case["module"])
+    _remove_empty_default_sheet(workbook)
 
     _ensure_headers(worksheet, _execution_timestamp)
     row_number = _find_test_case_row(worksheet, test_case["test_case_id"])

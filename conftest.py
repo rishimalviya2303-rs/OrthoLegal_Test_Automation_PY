@@ -30,5 +30,10 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[Any]) -> 
         return
 
     passed = report.passed
-    actual_result = test_case_data["actual_result"] if passed else "Test failed during execution."
+    if passed:
+        actual_result = test_case_data["actual_result"]
+    elif call.excinfo is not None:
+        actual_result = f"Test failed during execution: {call.excinfo.typename}: {call.excinfo.value}"
+    else:
+        actual_result = "Test failed during execution."
     record_test_case(test_case_data, "PASS" if passed else "FAIL", actual_result)
