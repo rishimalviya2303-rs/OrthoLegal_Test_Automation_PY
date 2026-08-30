@@ -1,7 +1,7 @@
 import re
 from typing import Any
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import BrowserContext, Locator, Page, expect
 
 from conftest import test_case as report_case
 from utils.auth import authenticate_super_admin, authenticate_with_credentials
@@ -79,33 +79,82 @@ def _select_role_from_excel(page: Page, form: Locator, selected_role: str) -> No
 
 
 def _logout(page: Page) -> None:
-    account_menu_candidates = [
-        page.get_by_role("button", name="Account"),
-        page.get_by_role("button", name="Profile"),
-        page.get_by_role("button", name="User"),
-        page.get_by_alt_text("Profile Image"),
-        page.get_by_text(re.compile(r"^Hi .*!")),
-        page.get_by_text("Ortholegal Admin", exact=True),
-    ]
-    for account_menu in account_menu_candidates:
-        if account_menu.count() > 0 and _visible(account_menu).is_visible():
-            _visible(account_menu).click()
-            break
-
-    logout_button = page.get_by_role("button", name="Logout").or_(
-        page.get_by_role("menuitem", name="Logout")
+    sign_out_button = page.get_by_role("button", name="Sign Out").or_(
+        page.get_by_role("menuitem", name="Sign Out")
     ).or_(
-        page.get_by_role("button", name="Sign out")
-    ).or_(
-        page.get_by_role("menuitem", name="Sign out")
-    ).or_(
-        page.get_by_text("Logout", exact=True)
+        page.get_by_text("Sign Out", exact=True)
     ).or_(
         page.get_by_text("Sign out", exact=True)
     )
-    expect(_visible(logout_button)).to_be_visible()
-    _visible(logout_button).click()
+    profile_click_targets = [
+        page.get_by_alt_text("Profile Image"),
+        page.get_by_text(re.compile(r"^Hi\s+.*!$")),
+        page.get_by_text("Super Admin", exact=True),
+    ]
+
+    for profile_target in profile_click_targets:
+        if profile_target.count() == 0:
+            continue
+
+        _visible(profile_target).click(force=True)
+        try:
+            expect(_visible(sign_out_button)).to_be_visible(timeout=3000)
+            break
+        except AssertionError:
+            continue
+    else:
+        profile_text = page.get_by_text(re.compile(r"^Hi\s+.*!$"))
+        expect(_visible(profile_text)).to_be_visible()
+        _visible(profile_text).evaluate(
+            "element => (element.closest('button') || element.closest('[role=button]') || element.parentElement)?.click()"
+        )
+
+    expect(_visible(sign_out_button)).to_be_visible()
+    _visible(sign_out_button).click()
     expect(page.get_by_label("Email")).to_be_visible()
+
+
+def _close_unexpected_google_drive_pages(context: BrowserContext, app_page: Page) -> list[str]:
+    closed_urls = []
+    for open_page in context.pages:
+        if open_page == app_page or open_page.is_closed():
+            continue
+
+        page_url = open_page.url
+        if "drive.google.com" in page_url or "accounts.google.com" in page_url:
+            closed_urls.append(page_url)
+            open_page.close()
+
+    app_page.bring_to_front()
+    return closed_urls
+
+
+def _save_user_and_return_to_users_screen(
+    page: Page,
+    form: Locator,
+    case_manager_name: str,
+    ortho_legal_email: str,
+) -> None:
+    save_button = form.get_by_role("button", name="Save")
+    expect(save_button).to_be_enabled()
+    save_button.click()
+
+    try:
+        expect(form).not_to_be_visible(timeout=30000)
+    except AssertionError:
+        form_errors = form.locator("mat-error, .mat-error, [role='alert']").filter(
+            has_text=re.compile(r"\S")
+        )
+        assert form_errors.count() == 0, (
+            f"User could not be saved. Validation/error message displayed: {_visible(form_errors).inner_text()}"
+        )
+
+        close_button = form.get_by_role("button").first
+        close_button.click()
+        expect(form).not_to_be_visible(timeout=10000)
+
+    _close_unexpected_google_drive_pages(page.context, page)
+    expect(page).to_have_url(re.compile(r".*/#/database/user&roles$"))
 
 
 @report_case(
@@ -176,11 +225,7 @@ def test_creation_of_case_manager_and_login_validation(page: Page) -> None:
     )
     expect(_visible(uploaded_signature_indicator)).to_be_visible()
 
-    save_button = form.get_by_role("button", name="Save")
-    expect(save_button).to_be_enabled()
-    save_button.click()
-
-    expect(form).not_to_be_visible(timeout=20000)
+    _save_user_and_return_to_users_screen(page, form, case_manager_name, ortho_legal_email)
 
     search_field = page.get_by_placeholder("Search by Name").or_(page.get_by_label("Search by Name"))
     expect(_visible(search_field)).to_be_visible()
