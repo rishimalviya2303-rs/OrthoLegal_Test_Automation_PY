@@ -1,15 +1,12 @@
-import os
+import re
 from typing import Any
 
-from dotenv import load_dotenv
 from playwright.sync_api import Locator, Page, expect
 
 from conftest import test_case as report_case
-from utils.auth import authenticate_case_manager, authenticate_super_admin
+from utils.auth import authenticate_super_admin, authenticate_with_credentials
 from utils.excel_reader import PROJECT_ROOT, read_worksheet
 
-
-load_dotenv()
 
 USER_TEST_DATA_PATH = PROJECT_ROOT / "test_data" / "Users_Test_Data.xlsx"
 SIGNATURE_PATH = PROJECT_ROOT / "test_data" / "Signatures" / "CaseManagetSignature.png"
@@ -46,10 +43,11 @@ def _required_text(row: dict[str, Any], column: str) -> str:
 
 
 def _case_manager_name(row: dict[str, Any]) -> str:
+    middle_name = row.get("Middle Name")
     return " ".join(
         part for part in [
             _required_text(row, "First Name"),
-            _required_text(row, "Middle Name"),
+            str(middle_name).strip() if middle_name is not None else "",
             _required_text(row, "Last Name"),
         ]
         if part
@@ -60,36 +58,50 @@ def _visible(locator: Locator) -> Locator:
     return locator.first
 
 
-def _fill_field(form: Locator, label: str, value: str) -> None:
-    field = form.get_by_label(label)
+def _fill_field(form: Locator, label: str | re.Pattern[str], value: str) -> None:
+    field = form.get_by_role("textbox", name=label).or_(form.get_by_label(label))
     expect(_visible(field)).to_be_visible()
     _visible(field).fill(value)
 
 
-def _case_manager_email_from_env() -> str:
-    email = os.getenv("CASE_MANAGER_EMAIL")
-    assert email and email.strip(), "CASE_MANAGER_EMAIL must be set in .env"
-    return email.strip()
+def _select_role_from_excel(page: Page, form: Locator, selected_role: str) -> None:
+    role_selector = form.get_by_label("Roles")
+    expect(_visible(role_selector)).to_be_visible()
+    _visible(role_selector).click()
 
-
-def _assert_case_manager_password_configured() -> None:
-    password = os.getenv("CASE_MANAGER_PASSWORD")
-    assert password and password.strip(), "CASE_MANAGER_PASSWORD must be set in .env"
+    role_option = page.locator("mat-option").filter(
+        has_text=re.compile(rf"^\s*{re.escape(selected_role)}\s*$")
+    )
+    expect(_visible(role_option)).to_be_visible()
+    _visible(role_option).click(force=True)
+    expect(form.get_by_text(selected_role, exact=True)).to_be_visible()
+    page.keyboard.press("Escape")
 
 
 def _logout(page: Page) -> None:
-    account_menu = page.get_by_role("button", name="Account").or_(
-        page.get_by_role("button", name="Profile")
-    ).or_(
-        page.get_by_role("button", name="User")
-    )
-    if account_menu.count() > 0:
-        _visible(account_menu).click()
+    account_menu_candidates = [
+        page.get_by_role("button", name="Account"),
+        page.get_by_role("button", name="Profile"),
+        page.get_by_role("button", name="User"),
+        page.get_by_alt_text("Profile Image"),
+        page.get_by_text(re.compile(r"^Hi .*!")),
+        page.get_by_text("Ortholegal Admin", exact=True),
+    ]
+    for account_menu in account_menu_candidates:
+        if account_menu.count() > 0 and _visible(account_menu).is_visible():
+            _visible(account_menu).click()
+            break
 
     logout_button = page.get_by_role("button", name="Logout").or_(
         page.get_by_role("menuitem", name="Logout")
     ).or_(
+        page.get_by_role("button", name="Sign out")
+    ).or_(
+        page.get_by_role("menuitem", name="Sign out")
+    ).or_(
         page.get_by_text("Logout", exact=True)
+    ).or_(
+        page.get_by_text("Sign out", exact=True)
     )
     expect(_visible(logout_button)).to_be_visible()
     _visible(logout_button).click()
@@ -99,24 +111,24 @@ def _logout(page: Page) -> None:
 @report_case(
     test_case_id="SUPERADMIN_USER_TC_001",
     module="Super Admin - Roles and Users",
-    title="Verify that if the Super Admin enters valid Case Manager details and saves the user, then the Case Manager is created successfully, displayed in the Users list with the correct name and email, and can log in successfully.",
+    test_case_name="Creation of Case Manager and Login Validation",
+    title="Verify that if the Super Admin creates a Case Manager using valid test data, then the Case Manager is created successfully and can log in using the same credentials.",
     test_type="Positive",
-    preconditions="The OrthoLegal web portal is accessible. A valid Super Admin test account exists. Case Manager creation data is available in the Users worksheet of the existing Excel input workbook. CASE_MANAGER_EMAIL and CASE_MANAGER_PASSWORD are available through .env. The Case Manager signature file exists in the repository.",
-    steps="1. Log in as Super Admin using environment credentials and the displayed verification PIN.\n2. Navigate to Database.\n3. Open Roles and Users.\n4. Verify the Users screen is displayed.\n5. Open the Add User form.\n6. Select the role whose visible name matches the Select Role value from Excel.\n7. Enter Case Manager details from Excel test data.\n8. Verify the Case Manager Ortho Legal email matches CASE_MANAGER_EMAIL from .env.\n9. Upload the Case Manager signature PNG from the repository test_data folder.\n10. Save the user.\n11. Search by the created Case Manager name.\n12. Verify the Users search results show the expected Case Manager name and Ortho Legal email.\n13. Log out the Super Admin.\n14. Log in as the created Case Manager using .env credentials and the displayed verification PIN.\n15. Verify that the authenticated Case Manager home page is displayed.",
-    test_data="User creation data from the Users worksheet in test_data/Users_Test_Data.xlsx; Case Manager login email and password from .env; signature from test_data/Signatures/CaseManagetSignature.png. Password and verification PIN are not reported.",
-    expected_result="The Case Manager should be created successfully, should be displayed in the Users search results with the same name and Ortho Legal email entered during creation, and should be able to log in successfully to the authenticated Case Manager home page.",
-    actual_result="The Case Manager was created successfully, was displayed in the Users search results with the expected name and Ortho Legal email, and logged in successfully to the authenticated Case Manager home page.",
+    preconditions="The OrthoLegal web portal is accessible. A valid Super Admin test account exists. Case Manager creation data is available in the Users worksheet of the existing Excel input workbook. The Case Manager signature file exists in the repository.",
+    steps="1. Log in as Super Admin using environment credentials and the displayed verification PIN.\n2. Navigate to Database.\n3. Open Roles and Users.\n4. Verify the Users screen is displayed.\n5. Open the Add User form.\n6. Select the role whose visible name matches the Select Role value from Excel.\n7. Enter Case Manager details from Excel test data.\n8. Upload the Case Manager signature PNG from the repository test_data folder.\n9. Save the user.\n10. Search by the created Case Manager name.\n11. Verify the Users search results show the expected Case Manager name and Ortho Legal email.\n12. Log out the Super Admin.\n13. Log in as the created Case Manager using the email and password from the same Excel row and the displayed verification PIN.\n14. Verify that the authenticated Case Manager home page is displayed.",
+    test_data="User creation and Case Manager login data from the Users worksheet in test_data/Users_Test_Data.xlsx; signature from test_data/Signatures/CaseManagetSignature.png. Password and verification PIN are not reported.",
+    expected_result="The Case Manager should be created successfully with the data provided in the Users Excel sheet, should appear in the Users list with the correct name and Ortho Legal email, and should successfully log in using the same credentials after completing verification.",
+    actual_result="The Case Manager was created successfully using the Excel test data, the created user was displayed with the expected name and Ortho Legal email, and the Case Manager successfully logged in after verification.",
 )
-def test_creation_of_case_manager(page: Page) -> None:
+def test_creation_of_case_manager_and_login_validation(page: Page) -> None:
     case_manager = _case_manager_data()
     selected_role = _required_text(case_manager, "Select Role")
     case_manager_name = _case_manager_name(case_manager)
     ortho_legal_email = _required_text(case_manager, "Ortho Legal Email")
     personal_email = _required_text(case_manager, "Personal Email")
-    assert ortho_legal_email == _case_manager_email_from_env(), (
-        "Ortho Legal Email in test_data/Users_Test_Data.xlsx must match CASE_MANAGER_EMAIL in .env"
-    )
-    _assert_case_manager_password_configured()
+    case_manager_password = _required_text(case_manager, "Password")
+    confirm_password = _required_text(case_manager, "Confirm Password")
+    assert case_manager_password == confirm_password, "Password and Confirm Password in Users_Test_Data.xlsx must match."
 
     assert SIGNATURE_PATH.exists(), f"Signature file was not found at expected path: {SIGNATURE_PATH}"
 
@@ -126,8 +138,8 @@ def test_creation_of_case_manager(page: Page) -> None:
     expect(_visible(database_link)).to_be_visible()
     _visible(database_link).click()
 
-    roles_and_users_link = page.get_by_role("link", name="Roles and Users").or_(
-        page.get_by_text("Roles and Users", exact=True)
+    roles_and_users_link = page.get_by_role("link", name="Roles & Users").or_(
+        page.get_by_text("Roles & Users", exact=True)
     )
     expect(_visible(roles_and_users_link)).to_be_visible()
     _visible(roles_and_users_link).click()
@@ -145,18 +157,15 @@ def test_creation_of_case_manager(page: Page) -> None:
     expect(_visible(add_user_form)).to_be_visible()
     form = _visible(add_user_form)
 
-    role_checkbox = form.get_by_label(selected_role)
-    expect(_visible(role_checkbox)).to_be_visible()
-    _visible(role_checkbox).check()
-    expect(_visible(role_checkbox)).to_be_checked()
+    _select_role_from_excel(page, form, selected_role)
 
-    _fill_field(form, "First Name", _required_text(case_manager, "First Name"))
-    _fill_field(form, "Middle Name", _required_text(case_manager, "Middle Name"))
-    _fill_field(form, "Last Name", _required_text(case_manager, "Last Name"))
-    _fill_field(form, "Ortho Legal Email", ortho_legal_email)
-    _fill_field(form, "Personal Email", personal_email)
-    _fill_field(form, "Password", _required_text(case_manager, "Password"))
-    _fill_field(form, "Confirm Password", _required_text(case_manager, "Confirm Password"))
+    _fill_field(form, re.compile(r"^First name$", re.I), _required_text(case_manager, "First Name"))
+    _fill_field(form, re.compile(r"^Middle name$", re.I), str(case_manager.get("Middle Name") or "").strip())
+    _fill_field(form, re.compile(r"^Last name$", re.I), _required_text(case_manager, "Last Name"))
+    _fill_field(form, re.compile(r"^Ortho\s*Legal email$", re.I), ortho_legal_email)
+    _fill_field(form, re.compile(r"^Personal email$", re.I), personal_email)
+    _fill_field(form, re.compile(r"^Password$", re.I), case_manager_password)
+    _fill_field(form, re.compile(r"^Confirm password$", re.I), confirm_password)
 
     signature_input = form.locator("input[type='file']")
     expect(_visible(signature_input)).to_be_attached()
@@ -171,7 +180,7 @@ def test_creation_of_case_manager(page: Page) -> None:
     expect(save_button).to_be_enabled()
     save_button.click()
 
-    expect(form).not_to_be_visible()
+    expect(form).not_to_be_visible(timeout=20000)
 
     search_field = page.get_by_placeholder("Search by Name").or_(page.get_by_label("Search by Name"))
     expect(_visible(search_field)).to_be_visible()
@@ -183,4 +192,4 @@ def test_creation_of_case_manager(page: Page) -> None:
     expect(_visible(matching_row).get_by_text(ortho_legal_email, exact=True)).to_be_visible()
 
     _logout(page)
-    authenticate_case_manager(page)
+    authenticate_with_credentials(page, ortho_legal_email, case_manager_password)

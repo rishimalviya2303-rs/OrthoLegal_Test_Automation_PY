@@ -8,13 +8,11 @@ from playwright.sync_api import Page, expect
 load_dotenv()
 
 
-def authenticate_user(page: Page, email_env_var: str, password_env_var: str) -> None:
+def authenticate_with_credentials(page: Page, email: str, password: str) -> None:
     base_url = os.getenv("BASE_URL")
-    email = os.getenv(email_env_var)
-    password = os.getenv(password_env_var)
     assert base_url, "BASE_URL must be set in .env"
-    assert email, f"{email_env_var} must be set in .env"
-    assert password, f"{password_env_var} must be set in .env"
+    assert email, "Login email must be provided"
+    assert password, "Login password must be provided"
 
     page.goto(base_url, wait_until="domcontentloaded")
     page.get_by_label("Email").fill(email)
@@ -36,9 +34,13 @@ def authenticate_user(page: Page, email_env_var: str, password_env_var: str) -> 
     assert page.url.endswith("#/dashboard"), "Home page was not displayed after login"
 
 
+def authenticate_user(page: Page, email_env_var: str, password_env_var: str) -> None:
+    email = os.getenv(email_env_var)
+    password = os.getenv(password_env_var)
+    assert email, f"{email_env_var} must be set in .env"
+    assert password, f"{password_env_var} must be set in .env"
+    authenticate_with_credentials(page, email, password)
+
+
 def authenticate_super_admin(page: Page) -> None:
     authenticate_user(page, "TEST_EMAIL", "TEST_PASSWORD")
-
-
-def authenticate_case_manager(page: Page) -> None:
-    authenticate_user(page, "CASE_MANAGER_EMAIL", "CASE_MANAGER_PASSWORD")

@@ -12,6 +12,7 @@ REPORT_DIRECTORY = Path(__file__).resolve().parents[1] / "reports"
 HEADERS = [
     "Test Case ID",
     "Module",
+    "Test Case Name",
     "Test Case Title",
     "Test Type",
     "Preconditions",
@@ -61,6 +62,7 @@ def record_test_case(test_case: dict[str, Any], status: str, actual_result: str)
     values = [
         test_case["test_case_id"],
         test_case["module"],
+        test_case.get("test_case_name", ""),
         test_case["title"],
         test_case["test_type"],
         test_case["preconditions"],
@@ -113,7 +115,7 @@ def _find_test_case_row(worksheet: Any, test_case_id: str) -> int | None:
 
 
 def _format_worksheet(worksheet: Any) -> None:
-    widths = [18, 16, 58, 14, 34, 55, 34, 55, 55, 12, 22]
+    widths = [18, 28, 34, 58, 14, 34, 55, 34, 55, 55, 12, 22]
     for column_number, width in enumerate(widths, start=1):
         worksheet.column_dimensions[get_column_letter(column_number)].width = width
     for row in worksheet.iter_rows(min_row=4):
