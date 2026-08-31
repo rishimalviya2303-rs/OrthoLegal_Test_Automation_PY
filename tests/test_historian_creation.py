@@ -111,7 +111,7 @@ def _logout(page: Page) -> None:
 
     expect(_visible(sign_out_button)).to_be_visible()
     _visible(sign_out_button).click()
-    expect(page.get_by_label("Email")).to_be_visible()
+    expect(page.get_by_label("Email", exact=True)).to_be_visible()
 
 
 def _close_unexpected_google_drive_pages(context: BrowserContext, app_page: Page) -> list[str]:
