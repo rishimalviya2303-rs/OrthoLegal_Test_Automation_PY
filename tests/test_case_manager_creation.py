@@ -2,7 +2,7 @@ import re
 from typing import Any
 
 
-from playwright.sync_api import BrowserContext, Locator, Page, expect
+from playwright.sync_api import BrowserContext, Locator, Page, expect  # pyrefly: ignore[missing-import]
 
 from conftest import test_case as report_case
 from utils.auth import authenticate_super_admin, authenticate_with_credentials
@@ -112,7 +112,7 @@ def _logout(page: Page) -> None:
 
     expect(_visible(sign_out_button)).to_be_visible()
     _visible(sign_out_button).click()
-    expect(page.get_by_label("Email", exact=True)).to_be_visible()
+    expect(page.get_by_role("textbox", name="Email")).to_be_visible()
 
 
 def _close_unexpected_google_drive_pages(context: BrowserContext, app_page: Page) -> list[str]:
