@@ -1,3 +1,4 @@
+import argparse
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,35 @@ from utils.excel_reader import PROJECT_ROOT
 
 ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "Encounter_Test_Data.xlsx"
 ENCOUNTER_SHEET_NAME = "Encounter_Test_Data"
+PQME_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "PQME_Encounter_Test_Data.xlsx"
+PQME_ENCOUNTER_SHEET_NAME = ENCOUNTER_SHEET_NAME
+PQMES_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "PQMES_Encounter_Test_Data.xlsx"
+PQMES_ENCOUNTER_SHEET_NAME = "PQMES_Encounter_Test_Data"
+
+PQME_ENCOUNTER_DETAILS_FIELDS = (
+    "Physician",
+    "Medical Evaluation Type",
+    "Encounter Type",
+    "Panel Number",
+    "Date of Appointment Call",
+    "Appointment Date and Time",
+    "Requesting Party",
+    "Examination Address",
+    "City",
+    "State",
+    "Zip",
+    "Evaluation Type",
+)
+
+PQMES_ENCOUNTER_DETAILS_FIELDS = (
+    "Physician",
+    "Medical Evaluation Type",
+    "Encounter Type",
+    "Panel Number",
+    "Date of Cover Letter",
+    "Date of Declaration",
+    "Requesting Party",
+)
 
 ENCOUNTER_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
@@ -45,20 +75,7 @@ ENCOUNTER_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ),
     (
         "Encounter Details",
-        (
-            "Physician",
-            "Medical Evaluation Type",
-            "Encounter Type",
-            "Panel Number",
-            "Date of Appointment Call",
-            "Appointment Date and Time",
-            "Requesting Party",
-            "Examination Address",
-            "City",
-            "State",
-            "Zip",
-            "Evaluation Type",
-        ),
+        PQME_ENCOUNTER_DETAILS_FIELDS,
     ),
     (
         "Upload Documents",
@@ -143,28 +160,46 @@ DATE_FIELDS = {
     ("Applicant Details", "Date of Birth"),
     ("Injury Details", "Date of Injury"),
     ("Encounter Details", "Date of Appointment Call"),
+    ("Encounter Details", "Date of Cover Letter"),
+    ("Encounter Details", "Date of Declaration"),
+}
+DATETIME_FIELDS = {
     ("Encounter Details", "Appointment Date and Time"),
 }
 
 
-def encounter_columns() -> list[tuple[str, str]]:
+def encounter_sections(
+    encounter_details_fields: tuple[str, ...] = PQME_ENCOUNTER_DETAILS_FIELDS,
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Return Encounter sections with a configurable Encounter Details field list."""
+    return tuple(
+        (section, encounter_details_fields if section == "Encounter Details" else fields)
+        for section, fields in ENCOUNTER_SECTIONS
+    )
+
+
+def encounter_columns(
+    encounter_details_fields: tuple[str, ...] = PQME_ENCOUNTER_DETAILS_FIELDS,
+) -> list[tuple[str, str]]:
     """Return Encounter columns as ordered (section, field) pairs."""
     return [
         (section, field)
-        for section, fields in ENCOUNTER_SECTIONS
+        for section, fields in encounter_sections(encounter_details_fields)
         for field in fields
     ]
 
 
 def create_encounter_test_data_workbook(
     workbook_path: Path = ENCOUNTER_WORKBOOK_PATH,
+    sheet_name: str = ENCOUNTER_SHEET_NAME,
+    encounter_details_fields: tuple[str, ...] = PQME_ENCOUNTER_DETAILS_FIELDS,
 ) -> Path:
     """Create the blank Encounter Creation test-data workbook."""
     workbook_path.parent.mkdir(parents=True, exist_ok=True)
 
     workbook = Workbook()
     worksheet = workbook.active
-    worksheet.title = ENCOUNTER_SHEET_NAME
+    worksheet.title = sheet_name
     worksheet.freeze_panes = "A3"
 
     section_fill = PatternFill("solid", fgColor="1F4E78")
@@ -174,7 +209,7 @@ def create_encounter_test_data_workbook(
     center = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     column_index = 1
-    for section, fields in ENCOUNTER_SECTIONS:
+    for section, fields in encounter_sections(encounter_details_fields):
         start_column = column_index
         for field in fields:
             section_cell = worksheet.cell(row=1, column=column_index, value=section)
@@ -213,6 +248,7 @@ def create_encounter_test_data_workbook(
 def read_encounter_test_data(
     row_number: int = 3,
     workbook_path: Path = ENCOUNTER_WORKBOOK_PATH,
+    sheet_name: str = ENCOUNTER_SHEET_NAME,
 ) -> dict[str, dict[str, Any]]:
     """Read one Encounter data row grouped by section and exact field name."""
     if row_number < 3:
@@ -221,17 +257,19 @@ def read_encounter_test_data(
         raise FileNotFoundError(f"Excel workbook not found: {workbook_path}")
 
     workbook = load_workbook(workbook_path, read_only=True, data_only=True)
-    if ENCOUNTER_SHEET_NAME not in workbook.sheetnames:
+    if sheet_name not in workbook.sheetnames:
         workbook.close()
-        raise ValueError(f"Worksheet '{ENCOUNTER_SHEET_NAME}' not found in workbook: {workbook_path}")
+        raise ValueError(f"Worksheet '{sheet_name}' not found in workbook: {workbook_path}")
 
-    worksheet = workbook[ENCOUNTER_SHEET_NAME]
+    worksheet = workbook[sheet_name]
     columns = _read_header_columns(worksheet)
     data: dict[str, dict[str, Any]] = {}
     for column_index, section, field in columns:
         value = worksheet.cell(row=row_number, column=column_index).value
         if (section, field) in DATE_FIELDS:
             value = format_encounter_date_value(value, section=section, field=field)
+        elif (section, field) in DATETIME_FIELDS:
+            value = format_encounter_datetime_value(value, section=section, field=field)
         data.setdefault(section, {})[field] = value
 
     workbook.close()
@@ -267,21 +305,54 @@ def format_encounter_date_value(value: Any, *, section: str, field: str) -> str 
     )
 
 
+def format_encounter_datetime_value(value: Any, *, section: str, field: str) -> str | None:
+    """Return Encounter date-time input values with MM/DD/YYYY date formatting."""
+    if value is None:
+        return None
+
+    if isinstance(value, datetime):
+        return value.strftime("%m/%d/%Y %I:%M %p")
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    for pattern in (
+        "%m/%d/%Y %I:%M %p",
+        "%m-%d-%Y %I:%M %p",
+        "%m/%d/%Y %H:%M",
+        "%m-%d-%Y %H:%M",
+        "%Y-%m-%d %H:%M",
+    ):
+        try:
+            parsed = datetime.strptime(text, pattern)
+            return parsed.strftime("%m/%d/%Y %I:%M %p")
+        except ValueError:
+            continue
+
+    date_only = format_encounter_date_value(value, section=section, field=field)
+    if date_only:
+        return date_only
+    return None
+
+
 def validate_encounter_workbook(
     workbook_path: Path = ENCOUNTER_WORKBOOK_PATH,
+    sheet_name: str = ENCOUNTER_SHEET_NAME,
+    encounter_details_fields: tuple[str, ...] = PQME_ENCOUNTER_DETAILS_FIELDS,
 ) -> None:
     """Validate workbook headers against the Encounter Creation schema."""
     if not workbook_path.exists():
         raise FileNotFoundError(f"Excel workbook not found: {workbook_path}")
 
     workbook = load_workbook(workbook_path, read_only=True, data_only=True)
-    if workbook.sheetnames != [ENCOUNTER_SHEET_NAME]:
+    if workbook.sheetnames != [sheet_name]:
         workbook.close()
-        raise ValueError(f"Workbook must contain only the '{ENCOUNTER_SHEET_NAME}' worksheet.")
+        raise ValueError(f"Workbook must contain only the '{sheet_name}' worksheet.")
 
-    worksheet = workbook[ENCOUNTER_SHEET_NAME]
+    worksheet = workbook[sheet_name]
     actual_columns = [(section, field) for _, section, field in _read_header_columns(worksheet)]
-    expected_columns = encounter_columns()
+    expected_columns = encounter_columns(encounter_details_fields)
     workbook.close()
 
     if actual_columns != expected_columns:
@@ -309,6 +380,27 @@ def _read_header_columns(worksheet: Any) -> list[tuple[int, str, str]]:
 
 
 if __name__ == "__main__":
-    output_path = create_encounter_test_data_workbook()
-    validate_encounter_workbook(output_path)
+    parser = argparse.ArgumentParser(description="Create Encounter test-data workbooks.")
+    parser.add_argument(
+        "--template",
+        choices=("pqme", "pqmes"),
+        default="pqme",
+        help="Encounter workbook template to generate.",
+    )
+    args = parser.parse_args()
+
+    if args.template == "pqmes":
+        output_path = create_encounter_test_data_workbook(
+            workbook_path=PQMES_ENCOUNTER_WORKBOOK_PATH,
+            sheet_name=PQMES_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=PQMES_ENCOUNTER_DETAILS_FIELDS,
+        )
+        validate_encounter_workbook(
+            output_path,
+            sheet_name=PQMES_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=PQMES_ENCOUNTER_DETAILS_FIELDS,
+        )
+    else:
+        output_path = create_encounter_test_data_workbook()
+        validate_encounter_workbook(output_path)
     print(f"Created {output_path}")

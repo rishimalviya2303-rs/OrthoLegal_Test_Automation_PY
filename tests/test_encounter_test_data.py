@@ -6,9 +6,12 @@ from utils.encounter_test_data import (
     DATE_FIELDS,
     ENCOUNTER_SECTIONS,
     ENCOUNTER_SHEET_NAME,
+    PQMES_ENCOUNTER_DETAILS_FIELDS,
+    PQMES_ENCOUNTER_SHEET_NAME,
     create_encounter_test_data_workbook,
     encounter_columns,
     format_encounter_date_value,
+    format_encounter_datetime_value,
     read_encounter_test_data,
     validate_encounter_workbook,
 )
@@ -69,6 +72,37 @@ def test_read_encounter_test_data_groups_repeated_field_names_by_section(tmp_pat
     assert encounter_data["Employer Details"]["Fax"] is None
 
 
+def test_read_encounter_test_data_supports_custom_sheet_name(tmp_path) -> None:
+    workbook_path = tmp_path / "PQME_Encounter_Test_Data.xlsx"
+    create_encounter_test_data_workbook(
+        workbook_path,
+        sheet_name=PQMES_ENCOUNTER_SHEET_NAME,
+        encounter_details_fields=PQMES_ENCOUNTER_DETAILS_FIELDS,
+    )
+    validate_encounter_workbook(
+        workbook_path,
+        sheet_name=PQMES_ENCOUNTER_SHEET_NAME,
+        encounter_details_fields=PQMES_ENCOUNTER_DETAILS_FIELDS,
+    )
+
+    workbook = load_workbook(workbook_path)
+    worksheet = workbook[PQMES_ENCOUNTER_SHEET_NAME]
+    column_lookup = {
+        (section, field): index
+        for index, (section, field) in enumerate(encounter_columns(PQMES_ENCOUNTER_DETAILS_FIELDS), start=1)
+    }
+    worksheet.cell(row=3, column=column_lookup[("Encounter Details", "Encounter Type")], value="PQMES")
+    workbook.save(workbook_path)
+    workbook.close()
+
+    encounter_data = read_encounter_test_data(
+        workbook_path=workbook_path,
+        sheet_name=PQMES_ENCOUNTER_SHEET_NAME,
+    )
+
+    assert encounter_data["Encounter Details"]["Encounter Type"] == "PQMES"
+
+
 def test_read_encounter_test_data_formats_date_fields_as_mm_dd_yyyy(tmp_path) -> None:
     workbook_path = tmp_path / "Encounter_Test_Data.xlsx"
     create_encounter_test_data_workbook(workbook_path)
@@ -91,13 +125,23 @@ def test_read_encounter_test_data_formats_date_fields_as_mm_dd_yyyy(tmp_path) ->
     assert encounter_data["Applicant Details"]["Date of Birth"] == "09/06/2026"
     assert encounter_data["Injury Details"]["Date of Injury"] == "09/07/2026"
     assert encounter_data["Encounter Details"]["Date of Appointment Call"] == "09/08/2026"
-    assert encounter_data["Encounter Details"]["Appointment Date and Time"] == "09/09/2026"
+    assert encounter_data["Encounter Details"]["Appointment Date and Time"] == "09/09/2026 10:30 AM"
     assert DATE_FIELDS == {
         ("Applicant Details", "Date of Birth"),
         ("Injury Details", "Date of Injury"),
         ("Encounter Details", "Date of Appointment Call"),
-        ("Encounter Details", "Appointment Date and Time"),
     }
+
+
+def test_format_encounter_datetime_value_requires_mm_dd_yyyy_date_output() -> None:
+    assert (
+        format_encounter_datetime_value(
+            "09-06-2026 14:05",
+            section="Encounter Details",
+            field="Appointment Date and Time",
+        )
+        == "09/06/2026 02:05 PM"
+    )
 
 
 def test_format_encounter_date_value_handles_blank_optional_dates() -> None:
