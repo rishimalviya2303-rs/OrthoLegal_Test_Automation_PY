@@ -1,176 +1,83 @@
 # OrthoLegal Automation Framework
 
-## 1. Overview
+## 1. Project Overview
 
-This repository contains a standalone end-to-end test automation framework for the OrthoLegal web portal.
+This repository contains a standalone Playwright + Python end-to-end automation framework for the OrthoLegal web application. It is maintained separately from the application source code and drives the browser like a real user.
 
-The automation framework is maintained separately from the OrthoLegal application source code and interacts with the application through the browser like an actual user.
+The current implementation covers Super Admin login, User Creation workflows, Encounter Creation workflows, Excel-driven test data, dynamic login verification, and timestamped Excel execution reporting.
 
-The framework currently uses:
+## 2. Tech Stack
 
-* Python
-* Playwright
-* pytest
-* pytest-playwright
-* python-dotenv
-* openpyxl
+| Technology | Purpose |
+| --- | --- |
+| Python | Automation language |
+| Playwright | Browser automation |
+| pytest | Test execution |
+| pytest-playwright | pytest integration for Playwright fixtures |
+| python-dotenv | `.env` configuration loading |
+| openpyxl | Excel test-data reading and execution-report generation |
 
-<<<<<<< HEAD
-The report contains test documentation and results only. Do not put passwords, PINs, tokens, or cookies in report metadata.
-
-## Excel Test Data
-
-Place the input workbook at:
-
-`test_data/OrthoLegal_Test_Data.xlsx`
-
-The reusable reader in `utils/excel_reader.py` treats the first row as headers and returns later rows as dictionaries. It skips rows unless `Execute` is `Yes`, case-insensitively. Future tests can filter actions without adding another reader:
-
-```python
-from utils.excel_reader import get_test_data
-
-create_users = get_test_data("Users", action="Create")
-```
-
-The `Action` value is preserved in each dictionary; UI actions such as Create, Edit, Deactivate, and Activate will be implemented by future tests. Blank cells are returned as `None`. The input workbook is read only and is never used for execution reports.
-=======
-The framework is being developed incrementally to support functional testing, negative testing, data-driven regression testing, and automated Excel execution reporting.
-
----
-
-## 2. Main Objectives
-
-The framework is designed to:
-
-* Automate OrthoLegal web portal workflows.
-* Maintain automation independently from the application source code.
-* Support positive and negative test scenarios.
-* Read configuration and credentials securely from environment variables.
-* Support dynamic verification PIN handling during login.
-* Support Excel-driven regression test data.
-* Generate a new Excel execution report for every pytest run.
-* Support future automation for Create, Edit, Activate, and Deactivate workflows.
-* Keep the framework simple, reusable, and maintainable.
-
----
-
-## 3. Technology Stack
-
-| Technology        | Purpose                                  |
-| ----------------- | ---------------------------------------- |
-| Python            | Automation programming language          |
-| Playwright        | Browser automation                       |
-| pytest            | Test execution framework                 |
-| pytest-playwright | Playwright integration with pytest       |
-| python-dotenv     | Environment configuration                |
-| openpyxl          | Excel input data and execution reporting |
-
----
-
-## 4. Project Structure
-
-The project is organized approximately as follows:
+## 3. Project Structure
 
 ```text
 OrthoLegal_Automation/
-│
-├── .venv/
-│
-├── tests/
-│   └── test_smoke.py
-│
-├── utils/
-│   ├── excel_reader.py
-│   └── <reporting helper>
-│
-├── test_data/
-│   └── OrthoLegal_Test_Data.xlsx
-│
-├── reports/
-│   └── OrthoLegal_Automation_Test_Report_<IST_TIMESTAMP>.xlsx
-│
-├── .env
-├── .env.example
-├── .gitignore
-├── conftest.py
-├── pytest.ini
-├── requirements.txt
-└── README.md
+|-- conftest.py
+|-- README.md
+|-- requirements.txt
+|-- reporting/
+|   |-- __init__.py
+|   `-- excel_report.py
+|-- reports/
+|   `-- OrthoLegal_Automation_Test_Report_<timestamp>_IST.xlsx
+|-- test_data/
+|   |-- PQME_Encounter_Test_Data.xlsx
+|   |-- PQMER_Encounter_Test_Data.xlsx
+|   |-- PQMES_Encounter_Test_Data.xlsx
+|   |-- PQMED_Encounter_Test_Data.xlsx
+|   |-- Reflex_PQMES_Encounter_Test_Data.xlsx
+|   |-- Users_Test_Data.xlsx
+|   |-- encounterfiles/
+|   |   |-- AttorneyDemo.docx
+|   |   `-- StrikePanel.docx
+|   `-- signatures/
+|       |-- CaseManagerSignature.png
+|       |-- CaseManagetSignature.png
+|       `-- ReportFinalizerSignature.png
+|-- tests/
+|   |-- test_case_manager_phone_update.py
+|   |-- test_encounter_test_data.py
+|   |-- test_excel_reader.py
+|   |-- test_super_admin_login.py
+|   |-- Encounter Creation/
+|   |   |-- test_pqme_encounter_creation.py
+|   |   |-- test_pqmer_encounter_creation.py
+|   |   |-- test_pqmes_encounter_creation.py
+|   |   |-- test_pqmed_encounter_creation.py
+|   |   `-- test_reflex_pqmes_encounter_creation.py
+|   `-- User Creation/
+|       |-- test_case_manager_creation.py
+|       |-- test_editor_creation.py
+|       |-- test_editor_manager_creation.py
+|       |-- test_historian_creation.py
+|       |-- test_historian_manager_creation.py
+|       |-- test_medical_assistant_creation.py
+|       |-- test_medical_assistant_manager_creation.py
+|       |-- test_record_reviewer_creation.py
+|       |-- test_record_reviewer_manager_creation.py
+|       `-- test_report_finalizer_creation.py
+`-- utils/
+    |-- __init__.py
+    |-- auth.py
+    |-- encounter_test_data.py
+    |-- excel_reader.py
+    `-- profile.py
 ```
 
-> The exact file names may evolve as the framework grows. Existing working automation should be preserved while the framework is expanded incrementally.
+Generated cache folders such as `.pytest_cache/`, `__pycache__/`, and `.venv/` may exist locally but are not part of the automation design.
 
----
+## 4. Environment Setup
 
-# 5. Initial Setup
-
-## 5.1 Create Virtual Environment
-
-From the project root:
-
-```powershell
-python -m venv .venv
-```
-
-Activate it in PowerShell:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-After activation, the terminal should display something similar to:
-
-```text
-(.venv) PS C:\Rishi Files\OrthoLegal_Automation>
-```
-
----
-
-## 5.2 Install Dependencies
-
-Install the required Python packages:
-
-```powershell
-python -m pip install playwright pytest pytest-playwright python-dotenv openpyxl
-```
-
-Install Playwright browser binaries:
-
-```powershell
-python -m playwright install
-```
-
-Verify Playwright:
-
-```powershell
-python -m playwright --version
-```
-
-Verify pytest:
-
-```powershell
-python -m pytest --version
-```
-
----
-
-# 6. Environment Configuration
-
-Application configuration and credentials must not be hardcoded inside test scripts.
-
-Create a local `.env` file in the project root.
-
-Example:
-
-```env
-BASE_URL=https://your-ortholegal-environment.com
-TEST_EMAIL=your-test-user@example.com
-TEST_PASSWORD=your-password
-```
-
-A `.env.example` file should contain only variable names/placeholders and must not contain real credentials.
-
-Example:
+Create a local `.env` file in the project root. The current authentication helper reads these variable names:
 
 ```env
 BASE_URL=
@@ -178,642 +85,443 @@ TEST_EMAIL=
 TEST_PASSWORD=
 ```
 
-The `.env` file should be excluded through `.gitignore`.
+`BASE_URL` is the OrthoLegal application URL. `TEST_EMAIL` and `TEST_PASSWORD` are the Super Admin login credentials used by `utils/auth.py`.
 
-Never commit:
+Never place real credentials in `README.md`, execution reports, committed code, or shared test data. The local `.env` file should remain private.
 
-* Passwords
-* Verification PINs
-* Authentication tokens
-* Cookies
-* Other sensitive credentials
+## 5. Installation
 
----
-
-# 7. Login Automation
-
-The OrthoLegal login workflow contains an additional verification step.
-
-The automated flow is:
-
-```text
-Open OrthoLegal Portal
-        ↓
-Enter Email
-        ↓
-Enter Password
-        ↓
-Click Sign In
-        ↓
-Credentials Validated
-        ↓
-Verification Screen
-        ↓
-Read 6-Digit PIN Displayed on Page
-        ↓
-Enter Same PIN in Verification Field
-        ↓
-Submit Verification
-        ↓
-Verify Dashboard
-```
-
-The verification PIN must always be read dynamically from the application.
-
-The PIN must never be hardcoded.
-
-Playwright reads the displayed PIN, extracts the required six-digit value when necessary, enters it into the verification field, and completes authentication.
-
----
-
-# 8. Current Login Test Coverage
-
-The current automation suite includes the following login scenarios.
-
-## LOGIN_TC_001
-
-**Test Case**
-
-Verify that if the user enters a valid email and valid password and completes PIN verification, then the user is successfully logged in.
-
-**Expected Result**
-
-* Valid credentials are accepted.
-* Verification screen is displayed.
-* The six-digit PIN is dynamically read from the application.
-* The PIN is entered into the verification field.
-* Verification succeeds.
-* The dashboard is displayed.
-
----
-
-## LOGIN_TC_002
-
-**Test Case**
-
-Verify that if the user enters a valid email and an incorrect password, then an incorrect password error is displayed.
-
-**Expected Result**
-
-* Login fails.
-* The appropriate incorrect-password error is displayed.
-* Verification PIN screen is not reached.
-* Dashboard is not reached.
-
----
-
-## LOGIN_TC_003
-
-**Test Case**
-
-Verify that if the user enters an invalid email format and a password, then the user is not allowed to proceed with login.
-
-**Expected Result**
-
-* Authentication does not proceed.
-* Email-format validation is triggered.
-* User remains on the login screen.
-* Verification PIN screen is not reached.
-* Dashboard is not reached.
-
-The test should verify the application's actual validation behavior, including native HTML email validation where applicable.
-
----
-
-# 9. Running Tests
-
-Run all available tests:
+From PowerShell:
 
 ```powershell
-python -m pytest
+cd "C:\Rishi Files\OrthoLegal_Automation"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m playwright install
 ```
 
-Run tests with the browser visible:
+Use the project virtual environment for test runs:
 
 ```powershell
-python -m pytest --headed
+.\.venv\Scripts\python.exe -m pytest --version
 ```
 
-Run a specific test file:
+## 6. Authentication and Dynamic Verification
 
-```powershell
-python -m pytest tests/test_smoke.py --headed
-```
+Login automation is centralized in `utils/auth.py`.
 
-Additional pytest selectors can be used to execute individual scenarios as the suite grows.
+The current flow is:
 
----
+1. Open `BASE_URL`.
+2. Enter the email and password from `.env`.
+3. Click `Sign in`.
+4. Wait for the verification-code screen.
+5. Read the application message containing `Login PIN sent to your email.`.
+6. Extract the displayed six-digit verification PIN from the page.
+7. Enter the extracted PIN into `Enter security pin code`.
+8. Submit the verification code.
+9. Validate the authenticated dashboard URL ending in `#/dashboard`.
 
-# 10. Excel Execution Reporting
+The six-digit verification PIN is dynamic and must not be hardcoded. Credentials, PINs, tokens, cookies, and other secrets must not be written to reports.
 
-The framework generates an Excel execution report using `openpyxl`.
+## 7. Test Data Architecture
 
-A new XLSX report is created for every pytest execution.
+### User Test Data
 
-Previous execution reports must not be overwritten.
-
-## Report Location
+User Creation tests read:
 
 ```text
-reports/
+test_data/Users_Test_Data.xlsx
 ```
 
-## Filename Format
-
-Reports use the pytest execution start date/time in Indian Standard Time.
-
-Example:
+Worksheet:
 
 ```text
-OrthoLegal_Automation_Test_Report_23_Aug_2026_03-24-38_PM_IST.xlsx
+Users
 ```
 
-The timezone is explicitly handled using:
+Current columns include:
 
 ```text
-Asia/Kolkata
+Select Role
+First Name
+Middle Name
+Last Name
+Ortho Legal Email
+Personal Email
+Password
+Confirm Password
+Updated Phone Number
+Updated Office Phone Number
 ```
 
-One pytest execution creates one Excel report.
+The User Creation tests select the correct row by matching the `Select Role` value.
 
-For example:
+Current `Select Role` values in the workbook:
+
+| Role |
+| --- |
+| Case Manager |
+| Historian |
+| Historian Manager |
+| Record Reviewer |
+| Record Reviewer Manager |
+| Medical Assistant |
+| Medical Assistant Manager |
+| Editor |
+| Editor Manager |
+| Report Finalizer |
+
+Credentials and user input values should come from Excel and `.env`, not from hardcoded test-script values.
+
+### Signature Files
+
+The current signature folder is:
 
 ```text
-pytest run
-    ↓
-LOGIN_TC_001
-LOGIN_TC_002
-LOGIN_TC_003
-    ↓
-ONE XLSX report
+test_data/signatures/
 ```
 
-Running pytest again generates another report with a new timestamp.
+Current signature files:
 
----
+| File | Current usage |
+| --- | --- |
+| `CaseManagetSignature.png` | Used by `tests\User Creation\test_case_manager_creation.py` |
+| `ReportFinalizerSignature.png` | Used by `tests\User Creation\test_report_finalizer_creation.py` |
+| `CaseManagerSignature.png` | Present in the folder, but the current Case Manager test uses `CaseManagetSignature.png` |
 
-# 11. Excel Report Content
+Signature upload currently applies to Case Manager and Report Finalizer creation tests only.
 
-Execution reports contain information such as:
+### Encounter Upload Files
 
-* Test Case ID
-* Module
-* Test Case Title
-* Test Type
-* Preconditions
-* Test Steps
-* Test Data
-* Expected Result
-* Actual Result
-* Status
-* Execution Date/Time
-
-Status is based on the actual automation execution:
+The current encounter upload folder is:
 
 ```text
-PASS
-FAIL
+test_data/encounterfiles/
 ```
 
-A failed automated test must never be artificially recorded as PASS.
+Current upload files:
 
-The Actual Result should describe the behavior observed during execution.
+| File |
+| --- |
+| `AttorneyDemo.docx` |
+| `StrikePanel.docx` |
 
----
+The PQME Encounter Creation test uploads these files through Playwright `set_input_files()`, avoiding the Windows native file dialog.
 
-# 12. Test Case Documentation Standard
+## 8. Encounter Test Data Workbooks
 
-Test cases should be documented in simple and professional English.
-
-Preferred format:
+Encounter data is read with the generic helper in `utils/encounter_test_data.py`. The helper reads a two-level Excel header design:
 
 ```text
-Verify that if [condition/action], then [expected behavior].
+Section -> Field
 ```
 
 Examples:
 
 ```text
-Verify that if the user enters a valid email and an incorrect password, then an incorrect password error is displayed.
+Encounter Details -> Physician
+Applicant Details -> First Name
+Upload Documents -> Upload Strike Panel
 ```
+
+Current workbooks:
+
+| Encounter Type | Workbook | Worksheet |
+| --- | --- | --- |
+| PQME | `PQME_Encounter_Test_Data.xlsx` | `Encounter_Test_Data` |
+| PQMER | `PQMER_Encounter_Test_Data.xlsx` | `Encounter_Test_Data` |
+| PQMES | `PQMES_Encounter_Test_Data.xlsx` | `PQMES_Encounter_Test_Data` |
+| PQMED | `PQMED_Encounter_Test_Data.xlsx` | `PQMED_Encounter_Test_Data` |
+| Reflex PQMES | `Reflex_PQMES_Encounter_Test_Data.xlsx` | `Reflex_PQMES_Encounter_Test_Dat` |
+
+Common workbook sections:
+
+| Section | Fields |
+| --- | --- |
+| Applicant Details | First Name, Middle Name, Last Name, Date of Birth, Gender, SSN, Address Line 1, Address Line 2, City, State, Zip, Home Phone, Cell Phone, Work Phone, Email, Job Title |
+| Injury Details | Date of Injury, Injured Body Parts, WCAB Number, Claim Number |
+| Upload Documents | Upload Strike Panel, Upload Attorney Demos |
+| Applicant Attorney Details | Firm, First Name, Middle Name, Last Name, Address Line 1, Address Line 2, City, State, Zip, Phone, Fax, Email, Assistant Email |
+| Employer Details | Employer, Address Line 1, Address Line 2, City, State, Zip, Phone, Fax, Email |
+| Defense Attorney Details | Firm, First Name, Middle Name, Last Name, Address Line 1, Address Line 2, City, State, Zip, Phone, Fax, Email, Assistant Email |
+| Insurance Company Details | Insurance Company, Payer ID, Insurance Company Phone, Adjuster First Name, Adjuster Middle Name, Adjuster Last Name, Address Line 1, Address Line 2, City, State, Zip, Adjuster Phone, Adjuster Fax, Adjuster Email, Adjuster Assistant Email |
+
+The `Encounter Details` section changes by encounter type.
+
+### PQME Encounter Details
+
+| Order | Field |
+| --- | --- |
+| 1 | Physician |
+| 2 | Medical Evaluation Type |
+| 3 | Encounter Type |
+| 4 | Panel Number |
+| 5 | Date of Appointment Call |
+| 6 | Appointment Date and Time |
+| 7 | Requesting Party |
+| 8 | Examination Address |
+| 9 | City |
+| 10 | State |
+| 11 | Zip |
+| 12 | Evaluation Type |
+
+### PQMER Encounter Details
+
+| Order | Field |
+| --- | --- |
+| 1 | Physician |
+| 2 | Medical Evaluation Type |
+| 3 | Encounter Type |
+| 4 | Panel Number |
+| 5 | Date of Appointment Call |
+| 6 | Appointment Date and Time |
+| 7 | Requesting Party |
+| 8 | Examination Address |
+| 9 | City |
+| 10 | State |
+| 11 | Zip |
+| 12 | Evaluation Type |
+
+### PQMES Encounter Details
+
+| Order | Field |
+| --- | --- |
+| 1 | Physician |
+| 2 | Medical Evaluation Type |
+| 3 | Encounter Type |
+| 4 | Panel Number |
+| 5 | Date of Cover Letter |
+| 6 | Date of Declaration |
+| 7 | Requesting Party |
+
+### PQMED Encounter Details
+
+| Order | Field |
+| --- | --- |
+| 1 | Physician |
+| 2 | Medical Evaluation Type |
+| 3 | Encounter Type |
+| 4 | Panel Number |
+| 5 | Date of Appointment Call |
+| 6 | Appointment Date and Time |
+| 7 | Requesting Party |
+| 8 | Address Line 1 |
+| 9 | Address Line 2 |
+| 10 | City |
+| 11 | State |
+| 12 | Zip |
+
+PQMED uses direct Encounter address fields instead of the PQME/PQMER `Examination Address` behavior.
+
+### Reflex PQMES Encounter Details
+
+| Order | Field |
+| --- | --- |
+| 1 | Physician |
+| 2 | Medical Evaluation Type |
+| 3 | Encounter Type |
+| 4 | Panel Number |
+| 5 | Date of Receipt |
+| 6 | Requesting Party |
+
+Normal PQMES uses `Date of Cover Letter` and `Date of Declaration`. Reflex PQMES uses `Date of Receipt`.
+
+## 9. User Creation Tests
+
+Current User Creation tests are located in:
 
 ```text
-Verify that if the user enters an invalid email format, then the user is not allowed to proceed with login.
+tests\User Creation\
 ```
+
+| Role | Test File | Data Source | Notes |
+| --- | --- | --- | --- |
+| Case Manager | `test_case_manager_creation.py` | `Users_Test_Data.xlsx` | Uploads `CaseManagetSignature.png` |
+| Editor | `test_editor_creation.py` | `Users_Test_Data.xlsx` | Creates user, validates search result, then logs in as created user |
+| Editor Manager | `test_editor_manager_creation.py` | `Users_Test_Data.xlsx` | Creates user, validates search result, then logs in as created user |
+| Historian | `test_historian_creation.py` | `Users_Test_Data.xlsx` | Creates user, validates search result, then logs in as created user |
+| Historian Manager | `test_historian_manager_creation.py` | `Users_Test_Data.xlsx` | Creates user, validates search result, then logs in as created user |
+| Medical Assistant | `test_medical_assistant_creation.py` | `Users_Test_Data.xlsx` | Leaves the Medical Assistant-specific 4-digit PIN/Create PIN field untouched |
+| Medical Assistant Manager | `test_medical_assistant_manager_creation.py` | `Users_Test_Data.xlsx` | Leaves the Medical Assistant-specific 4-digit PIN/Create PIN field untouched |
+| Record Reviewer | `test_record_reviewer_creation.py` | `Users_Test_Data.xlsx` | Creates user, validates search result, then logs in as created user |
+| Record Reviewer Manager | `test_record_reviewer_manager_creation.py` | `Users_Test_Data.xlsx` | Reuses Record Reviewer helpers for the manager role workflow |
+| Report Finalizer | `test_report_finalizer_creation.py` | `Users_Test_Data.xlsx` | Uploads `ReportFinalizerSignature.png` |
+
+The Medical Assistant role-specific 4-digit workflow PIN is separate from the dynamic six-digit login verification PIN and is intentionally left untouched by the current Medical Assistant tests.
+
+## 10. Encounter Creation Tests
+
+Current Encounter Creation tests are located in:
 
 ```text
-Verify that if valid user details are provided, then the user is created successfully.
+tests\Encounter Creation\
 ```
 
-Requirements may initially be provided in Hinglish, but test case documentation and execution reports should use clear English.
+| Encounter Type | Test File | Data Source | Notes |
+| --- | --- | --- | --- |
+| PQME | `test_pqme_encounter_creation.py` | `PQME_Encounter_Test_Data.xlsx` | Uses appointment call/date-time fields, Examination Address, Evaluation Type, and document uploads |
+| PQMER | `test_pqmer_encounter_creation.py` | `PQMER_Encounter_Test_Data.xlsx` | Uses the same Encounter Details field structure as PQME |
+| PQMES | `test_pqmes_encounter_creation.py` | `PQMES_Encounter_Test_Data.xlsx` | Uses Date of Cover Letter and Date of Declaration |
+| PQMED | `test_pqmed_encounter_creation.py` | `PQMED_Encounter_Test_Data.xlsx` | Uses appointment date/time and direct Encounter address fields |
+| Reflex PQMES | `test_reflex_pqmes_encounter_creation.py` | `Reflex_PQMES_Encounter_Test_Data.xlsx` | Uses Date of Receipt instead of PQMES cover-letter/declaration dates |
 
----
+## 11. Standalone Tests
 
-# 13. Data-Driven Regression Testing
+| Test File | Purpose |
+| --- | --- |
+| `tests\test_super_admin_login.py` | Validates Super Admin login using `.env` credentials and the displayed six-digit verification PIN |
+| `tests\test_case_manager_phone_update.py` | Updates and validates Case Manager phone numbers from `Users_Test_Data.xlsx` |
+| `tests\test_excel_reader.py` | Unit coverage for Excel reader filtering behavior |
+| `tests\test_encounter_test_data.py` | Unit coverage for Encounter workbook generation, two-level headers, grouping, and date/date-time formatting |
 
-The framework is being prepared to support Excel-driven regression automation.
+## 12. Running Tests
 
-Test data is maintained separately from execution reports.
+Run commands should be executed from the project root:
 
-## Input Workbook
-
-The expected input workbook is:
-
-```text
-test_data/OrthoLegal_Test_Data.xlsx
+```powershell
+cd "C:\Rishi Files\OrthoLegal_Automation"
 ```
 
-Do not store the input workbook inside `.venv`.
+### Run All Tests
 
-The input workbook acts only as a test data source.
-
-Execution results must not be written into the input workbook.
-
----
-
-# 14. Input Workbook Structure
-
-The workbook can contain module-specific worksheets such as:
-
-```text
-OrthoLegal_Test_Data.xlsx
-│
-├── Users
-├── Physicians
-├── Clinic_Locations
-├── Attorneys
-└── Insurance_Companies
+```powershell
+.\.venv\Scripts\python.exe -m pytest --headed -v
 ```
 
-This allows a single input workbook to support multiple regression modules.
+### Run All User Creation Tests
 
----
-
-# 15. Users Input Sheet
-
-The `Users` worksheet is the first planned data-driven workflow.
-
-Example:
-
-| Execute | Action | Test Data ID  | Role      | First Name | Last Name | Email                                         |
-| ------- | ------ | ------------- | --------- | ---------- | --------- | --------------------------------------------- |
-| Yes     | Create | USER_DATA_001 | Historian | John       | Smith     | [john@example.com](mailto:john@example.com)   |
-| Yes     | Create | USER_DATA_002 | Editor    | Sarah      | Lee       | [sarah@example.com](mailto:sarah@example.com) |
-| No      | Create | USER_DATA_003 | Historian | Test       | User      | [test@example.com](mailto:test@example.com)   |
-
-Each row represents one data set.
-
----
-
-# 16. Execute Column
-
-The `Execute` column controls whether an input row should be processed.
-
-```text
-Execute = Yes
+```powershell
+.\.venv\Scripts\python.exe -m pytest "tests\User Creation" --headed -v
 ```
 
-The row should be processed.
+### Run Individual User Creation Tests
 
-```text
-Execute = No
+| Role | Command |
+| --- | --- |
+| Case Manager | `.\.venv\Scripts\python.exe -m pytest "tests\User Creation\test_case_manager_creation.py" --headed -v` |
+| Editor | `.\.venv\Scripts\python.exe -m pytest "tests\User Creation\test_editor_creation.py" --headed -v` |
+| Editor Manager | `.\.venv\Scripts\python.exe -m pytest "tests\User Creation\test_editor_manager_creation.py" --headed -v` |
+| Historian | `.\.venv\Scripts\python.exe -m pytest "tests\User Creation\test_historian_creation.py" --headed -v` |
+| Historian Manager | `.\.venv\Scripts\python.exe -m pytest "tests\User Creation\test_historian_manager_creation.py" --headed -v` |
+| Medical Assistant | `.\.venv\Scripts\python.exe -m pytest "tests\User Creation\test_medical_assistant_creation.py" --headed -v` |
+| Medical Assistant Manager | `.\.venv\Scripts\python.exe -m pytest "tests\User Creation\test_medical_assistant_manager_creation.py" --headed -v` |
+| Record Reviewer | `.\.venv\Scripts\python.exe -m pytest "tests\User Creation\test_record_reviewer_creation.py" --headed -v` |
+| Record Reviewer Manager | `.\.venv\Scripts\python.exe -m pytest "tests\User Creation\test_record_reviewer_manager_creation.py" --headed -v` |
+| Report Finalizer | `.\.venv\Scripts\python.exe -m pytest "tests\User Creation\test_report_finalizer_creation.py" --headed -v` |
+
+### Run All Encounter Creation Tests
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation" --headed -v
 ```
 
-The row should be skipped.
+### Run Individual Encounter Creation Tests
+
+| Encounter Type | Command |
+| --- | --- |
+| PQME | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqme_encounter_creation.py" --headed -v` |
+| PQMER | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqmer_encounter_creation.py" --headed -v` |
+| PQMES | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqmes_encounter_creation.py" --headed -v` |
+| PQMED | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqmed_encounter_creation.py" --headed -v` |
+| Reflex PQMES | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_reflex_pqmes_encounter_creation.py" --headed -v` |
+
+### Run Standalone Tests
+
+| Test | Command |
+| --- | --- |
+| Super Admin Login | `.\.venv\Scripts\python.exe -m pytest tests\test_super_admin_login.py --headed -v` |
+| Case Manager Phone Update | `.\.venv\Scripts\python.exe -m pytest tests\test_case_manager_phone_update.py --headed -v` |
+| Excel Reader Unit Tests | `.\.venv\Scripts\python.exe -m pytest tests\test_excel_reader.py -v` |
+| Encounter Test Data Unit Tests | `.\.venv\Scripts\python.exe -m pytest tests\test_encounter_test_data.py -v` |
+
+## 13. Execution Reporting
+
+Execution reporting is implemented in `reporting/excel_report.py` and connected through pytest hooks in `conftest.py`.
+
+Current behavior:
+
+| Behavior | Implementation |
+| --- | --- |
+| Report folder | `reports/` |
+| Report format | `.xlsx` |
+| Report filename | `OrthoLegal_Automation_Test_Report_<DD_Mon_YYYY_HH-MM-SS_AM/PM_IST>.xlsx` |
+| Timestamp timezone | `Asia/Kolkata` |
+| Per-run behavior | One pytest execution creates one timestamped workbook |
+| Multiple tests in same run | All report-enabled tests from that run are written into the same workbook |
+| Previous reports | Preserved; filenames are timestamped and collision-safe |
+
+Report worksheets are organized by the test metadata `module` value. Current report columns are:
+
+| Column |
+| --- |
+| Test Case ID |
+| Module |
+| Test Case Name |
+| Test Case Title |
+| Test Type |
+| Preconditions |
+| Test Steps |
+| Test Data |
+| Expected Result |
+| Actual Result |
+| Status |
+| Execution Date/Time |
+
+Only tests decorated with `@test_case(...)` metadata are written to the Excel execution report.
+
+Execution reports must not contain passwords, verification PINs, tokens, cookies, or secrets.
+
+## 14. Current Automation Coverage
+
+| Category | Test | File | Data Source | Status |
+| --- | --- | --- | --- | --- |
+| Login | Super Admin Login | `tests\test_super_admin_login.py` | `.env` | Automated |
+| User Creation | Case Manager | `tests\User Creation\test_case_manager_creation.py` | `Users_Test_Data.xlsx` | Automated |
+| User Creation | Editor | `tests\User Creation\test_editor_creation.py` | `Users_Test_Data.xlsx` | Automated |
+| User Creation | Editor Manager | `tests\User Creation\test_editor_manager_creation.py` | `Users_Test_Data.xlsx` | Automated |
+| User Creation | Historian | `tests\User Creation\test_historian_creation.py` | `Users_Test_Data.xlsx` | Automated |
+| User Creation | Historian Manager | `tests\User Creation\test_historian_manager_creation.py` | `Users_Test_Data.xlsx` | Automated |
+| User Creation | Medical Assistant | `tests\User Creation\test_medical_assistant_creation.py` | `Users_Test_Data.xlsx` | Automated |
+| User Creation | Medical Assistant Manager | `tests\User Creation\test_medical_assistant_manager_creation.py` | `Users_Test_Data.xlsx` | Automated |
+| User Creation | Record Reviewer | `tests\User Creation\test_record_reviewer_creation.py` | `Users_Test_Data.xlsx` | Automated |
+| User Creation | Record Reviewer Manager | `tests\User Creation\test_record_reviewer_manager_creation.py` | `Users_Test_Data.xlsx` | Automated |
+| User Creation | Report Finalizer | `tests\User Creation\test_report_finalizer_creation.py` | `Users_Test_Data.xlsx` | Automated |
+| User Profile | Case Manager Phone Update | `tests\test_case_manager_phone_update.py` | `Users_Test_Data.xlsx` | Automated |
+| Encounter Creation | PQME | `tests\Encounter Creation\test_pqme_encounter_creation.py` | `PQME_Encounter_Test_Data.xlsx` | Automated |
+| Encounter Creation | PQMER | `tests\Encounter Creation\test_pqmer_encounter_creation.py` | `PQMER_Encounter_Test_Data.xlsx` | Automated |
+| Encounter Creation | PQMES | `tests\Encounter Creation\test_pqmes_encounter_creation.py` | `PQMES_Encounter_Test_Data.xlsx` | Automated |
+| Encounter Creation | PQMED | `tests\Encounter Creation\test_pqmed_encounter_creation.py` | `PQMED_Encounter_Test_Data.xlsx` | Automated |
+| Encounter Creation | Reflex PQMES | `tests\Encounter Creation\test_reflex_pqmes_encounter_creation.py` | `Reflex_PQMES_Encounter_Test_Data.xlsx` | Automated |
+| Utility | Excel Reader | `tests\test_excel_reader.py` | temporary workbook fixture | Automated |
+| Utility | Encounter Test Data | `tests\test_encounter_test_data.py` | temporary workbook fixture | Automated |
+
+## 15. Framework Guidelines
+
+Follow these practices when extending the suite:
+
+1. Use Playwright auto-waiting and assertions instead of arbitrary `time.sleep()`.
+2. Prefer stable semantic locators such as roles, labels, text, placeholders, and test IDs.
+3. Keep credentials in `.env`.
+4. Keep workflow input data in Excel workbooks under `test_data/`.
+5. Reuse common helpers from `utils/`, `reporting/`, and `conftest.py`.
+6. Keep tests independently runnable.
+7. Do not hardcode dynamic verification values.
+8. Use project-relative paths for files and uploads.
+9. Use `set_input_files()` for uploads instead of depending on native file dialogs.
+10. Do not depend on browser page indexes for external or PDF tabs.
+11. Keep input workbooks separate from execution reports.
+12. Do not write passwords, PINs, tokens, cookies, or other secrets to reports.
+
+## 16. Current Notes and Known Conventions
+
+The active repository does not contain `pytest.ini`.
+
+`requirements.txt` currently lists `openpyxl` and `tzdata`. The test code also imports Playwright, pytest, pytest-playwright behavior, and python-dotenv, so the environment must have those packages installed for the full browser suite to run.
 
-This allows test data to remain in the workbook without requiring every row to execute during every regression run.
+`utils/excel_reader.py` supports simple one-row-header worksheets and provides `read_worksheet()` and `get_test_data()`. The user creation tests currently call `read_worksheet()` and perform role matching with the `Select Role` column.
 
----
+`utils/encounter_test_data.py` supports Encounter workbooks with two header rows, grouping data by `Section -> Field`, and formatting date/date-time inputs for Encounter workflows.
 
-# 17. Action Column
-
-The input workbook is designed to support actions such as:
-
-```text
-Create
-Edit
-Deactivate
-Activate
-```
-
-The first implementation will focus on:
-
-```text
-Action = Create
-```
-
-Future automation will progressively add Edit, Deactivate, and Activate workflows.
-
----
-
-# 18. Test Data ID
-
-Every input data row should have a unique identifier.
-
-Examples:
-
-```text
-USER_DATA_001
-USER_DATA_002
-USER_DATA_003
-```
-
-This makes individual data sets easier to identify during execution and reporting.
-
----
-
-# 19. Excel Field Mapping
-
-Excel column headers should represent the corresponding application fields.
-
-Example:
-
-```text
-Excel Column              Application
-
-First Name        →       First Name field
-Last Name         →       Last Name field
-Email             →       Email field
-Role              →       Role dropdown
-Language          →       Language field
-```
-
-The Excel reader itself should not contain Playwright UI locators.
-
-Its responsibility is:
-
-```text
-Excel
-   ↓
-Read Headers
-   ↓
-Read Row
-   ↓
-Convert Row to Dictionary
-```
-
-Example:
-
-```python
-{
-    "Execute": "Yes",
-    "Action": "Create",
-    "Test Data ID": "USER_DATA_001",
-    "Role": "Historian",
-    "First Name": "John",
-    "Last Name": "Smith",
-    "Email": "john@example.com"
-}
-```
-
-A separate automation/mapping layer is responsible for mapping those values to actual application controls.
-
-This separation allows application locators to change without requiring the input workbook format to be redesigned.
-
----
-
-# 20. Excel Reader
-
-A reusable Excel reader is used/planned under:
-
-```text
-utils/excel_reader.py
-```
-
-Its responsibility is to:
-
-* Open the input workbook.
-* Read a worksheet by name.
-* Treat the first row as headers.
-* Convert subsequent rows into dictionaries.
-* Skip rows where `Execute = No`.
-* Allow filtering by `Action`.
-* Handle blank cells safely.
-* Report meaningful errors when the workbook, worksheet, or required columns are missing.
-
-The same reader should eventually work for every supported module.
-
-Conceptually:
-
-```python
-get_test_data("Users", action="Create")
-```
-
-returns enabled User Creation datasets.
-
-The same mechanism can later support:
-
-```python
-get_test_data("Physicians", action="Create")
-get_test_data("Clinic_Locations", action="Create")
-get_test_data("Attorneys", action="Create")
-get_test_data("Insurance_Companies", action="Create")
-```
-
----
-
-# 21. Planned Data-Driven User Creation Flow
-
-The planned User Creation regression flow is:
-
-```text
-Login to OrthoLegal
-        ↓
-Navigate to User Management
-        ↓
-Open Create User
-        ↓
-Read Users Sheet
-        ↓
-Filter Execute = Yes
-        ↓
-Filter Action = Create
-        ↓
-Read One Dataset
-        ↓
-Map Excel Columns to Application Fields
-        ↓
-Populate User Form
-        ↓
-Submit Create Action
-        ↓
-Verify User Creation
-        ↓
-Record PASS / FAIL
-        ↓
-Continue With Next Dataset
-```
-
-A failure for one dataset should ideally not prevent the remaining independent datasets from being executed.
-
----
-
-# 22. Future Regression Coverage
-
-The framework is intended to progressively support data-driven automation for:
-
-### User Management
-
-* Create User
-* Edit User
-* Deactivate User
-* Activate User
-
-### Physician Management
-
-* Create Physician
-* Edit Physician
-* Deactivate Physician
-* Activate Physician
-
-### Clinic Location Management
-
-* Create Clinic Location
-* Edit Clinic Location
-* Deactivate Clinic Location
-* Activate Clinic Location
-
-### Attorney Management
-
-* Create Attorney
-* Edit Attorney
-* Deactivate Attorney
-* Activate Attorney
-
-### Insurance Company Management
-
-* Create Insurance Company
-* Edit Insurance Company
-* Deactivate Insurance Company
-* Activate Insurance Company
-
-Additional OrthoLegal workflows can be added incrementally.
-
----
-
-# 23. Input Data vs Execution Report
-
-These are two completely different Excel files.
-
-## Input
-
-```text
-test_data/OrthoLegal_Test_Data.xlsx
-```
-
-Purpose:
-
-```text
-Provide data to automation
-```
-
-## Output
-
-```text
-reports/OrthoLegal_Automation_Test_Report_<IST_TIMESTAMP>.xlsx
-```
-
-Purpose:
-
-```text
-Record automation execution results
-```
-
-The framework must never confuse or combine these responsibilities.
-
----
-
-# 24. Automation Development Principles
-
-When extending this project:
-
-1. Inspect existing automation before making changes.
-2. Preserve working tests.
-3. Avoid duplicate test implementations.
-4. Prefer stable Playwright locators:
-
-   * `get_by_role`
-   * `get_by_label`
-   * `get_by_placeholder`
-   * `get_by_text`
-   * `get_by_test_id`
-5. Avoid arbitrary `time.sleep()`.
-6. Use Playwright auto-waiting and appropriate assertions.
-7. Never hardcode credentials or verification PINs.
-8. Keep test data separate from automation logic.
-9. Keep execution reporting separate from input test data.
-10. Avoid unnecessary framework complexity.
-11. Add reusable abstractions only when repeated automation creates a genuine need.
-12. Keep test cases understandable and maintainable.
-
----
-
-# 25. Current Development Status
-
-### Completed / Implemented
-
-* Standalone external automation repository
-* Python virtual environment
-* Playwright installation
-* pytest integration
-* pytest-playwright integration
-* Playwright browser installation
-* Environment-based configuration
-* Basic smoke testing
-* OrthoLegal login automation
-* Dynamic six-digit verification PIN handling
-* Successful-login validation
-* Incorrect-password negative scenario
-* Invalid-email-format negative scenario
-* Excel execution reporting foundation
-* New timestamped XLSX execution report per pytest run
-* IST-based execution timestamps
-* Excel input-data template design
-* Excel-driven regression foundation / reader
-
-### Next Major Implementation
-
-**Excel-driven User Creation automation**
-
-The next phase will:
-
-1. Read enabled User Creation datasets from the `Users` worksheet.
-2. Log in to OrthoLegal.
-3. Navigate to User Management.
-4. Open the User Creation screen.
-5. Map Excel fields to application fields.
-6. Populate the form.
-7. Create each user.
-8. Verify the creation result.
-9. Record individual dataset execution results in the timestamped Excel report.
-
----
-
-# 26. Development Approach
-
-This automation framework is intentionally being developed incrementally.
-
-The approach is:
-
-```text
-Understand Manual Workflow
-        ↓
-Define Test Case
-        ↓
-Prepare Test Data
-        ↓
-Automate with Playwright
-        ↓
-Execute with pytest
-        ↓
-Validate Actual Behavior
-        ↓
-Generate Excel Report
-        ↓
-Refactor Repeated Logic
-        ↓
-Add Next Regression Scenario
-```
-
-The goal is to progressively build a maintainable OrthoLegal regression automation suite without introducing unnecessary complexity before it is required.
->>>>>>> 9243ee2e67300ee59df14f2596af153068686234
+The temporary workbook lock file `test_data/~$Encounter_Test_Data.xlsx` may appear when Excel has a workbook open and should not be treated as a test-data workbook.
