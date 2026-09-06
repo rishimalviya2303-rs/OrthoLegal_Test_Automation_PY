@@ -14,8 +14,14 @@ ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "Encounter_Test_Data.xlsx
 ENCOUNTER_SHEET_NAME = "Encounter_Test_Data"
 PQME_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "PQME_Encounter_Test_Data.xlsx"
 PQME_ENCOUNTER_SHEET_NAME = ENCOUNTER_SHEET_NAME
+PQMER_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "PQMER_Encounter_Test_Data.xlsx"
+PQMER_ENCOUNTER_SHEET_NAME = ENCOUNTER_SHEET_NAME
 PQMES_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "PQMES_Encounter_Test_Data.xlsx"
 PQMES_ENCOUNTER_SHEET_NAME = "PQMES_Encounter_Test_Data"
+REFLEX_PQMES_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "Reflex_PQMES_Encounter_Test_Data.xlsx"
+REFLEX_PQMES_ENCOUNTER_SHEET_NAME = "Reflex_PQMES_Encounter_Test_Dat"
+PQMED_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "PQMED_Encounter_Test_Data.xlsx"
+PQMED_ENCOUNTER_SHEET_NAME = "PQMED_Encounter_Test_Data"
 
 PQME_ENCOUNTER_DETAILS_FIELDS = (
     "Physician",
@@ -40,6 +46,30 @@ PQMES_ENCOUNTER_DETAILS_FIELDS = (
     "Date of Cover Letter",
     "Date of Declaration",
     "Requesting Party",
+)
+
+REFLEX_PQMES_ENCOUNTER_DETAILS_FIELDS = (
+    "Physician",
+    "Medical Evaluation Type",
+    "Encounter Type",
+    "Panel Number",
+    "Date of Receipt",
+    "Requesting Party",
+)
+
+PQMED_ENCOUNTER_DETAILS_FIELDS = (
+    "Physician",
+    "Medical Evaluation Type",
+    "Encounter Type",
+    "Panel Number",
+    "Date of Appointment Call",
+    "Appointment Date and Time",
+    "Requesting Party",
+    "Address Line 1",
+    "Address Line 2",
+    "City",
+    "State",
+    "Zip",
 )
 
 ENCOUNTER_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -162,6 +192,7 @@ DATE_FIELDS = {
     ("Encounter Details", "Date of Appointment Call"),
     ("Encounter Details", "Date of Cover Letter"),
     ("Encounter Details", "Date of Declaration"),
+    ("Encounter Details", "Date of Receipt"),
 }
 DATETIME_FIELDS = {
     ("Encounter Details", "Appointment Date and Time"),
@@ -383,7 +414,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create Encounter test-data workbooks.")
     parser.add_argument(
         "--template",
-        choices=("pqme", "pqmes"),
+        choices=("pqme", "pqmer", "pqmes", "pqmed", "reflex-pqmes"),
         default="pqme",
         help="Encounter workbook template to generate.",
     )
@@ -399,6 +430,39 @@ if __name__ == "__main__":
             output_path,
             sheet_name=PQMES_ENCOUNTER_SHEET_NAME,
             encounter_details_fields=PQMES_ENCOUNTER_DETAILS_FIELDS,
+        )
+    elif args.template == "reflex-pqmes":
+        output_path = create_encounter_test_data_workbook(
+            workbook_path=REFLEX_PQMES_ENCOUNTER_WORKBOOK_PATH,
+            sheet_name=REFLEX_PQMES_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=REFLEX_PQMES_ENCOUNTER_DETAILS_FIELDS,
+        )
+        validate_encounter_workbook(
+            output_path,
+            sheet_name=REFLEX_PQMES_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=REFLEX_PQMES_ENCOUNTER_DETAILS_FIELDS,
+        )
+    elif args.template == "pqmed":
+        output_path = create_encounter_test_data_workbook(
+            workbook_path=PQMED_ENCOUNTER_WORKBOOK_PATH,
+            sheet_name=PQMED_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=PQMED_ENCOUNTER_DETAILS_FIELDS,
+        )
+        validate_encounter_workbook(
+            output_path,
+            sheet_name=PQMED_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=PQMED_ENCOUNTER_DETAILS_FIELDS,
+        )
+    elif args.template == "pqmer":
+        output_path = create_encounter_test_data_workbook(
+            workbook_path=PQMER_ENCOUNTER_WORKBOOK_PATH,
+            sheet_name=PQMER_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=PQME_ENCOUNTER_DETAILS_FIELDS,
+        )
+        validate_encounter_workbook(
+            output_path,
+            sheet_name=PQMER_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=PQME_ENCOUNTER_DETAILS_FIELDS,
         )
     else:
         output_path = create_encounter_test_data_workbook()

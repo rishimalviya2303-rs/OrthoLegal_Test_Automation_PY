@@ -1,41 +1,51 @@
+import importlib.util
 import re
+import sys
+from pathlib import Path
 from typing import Any
 
 from playwright.sync_api import Page, expect  # pyrefly: ignore[missing-import]
 
 from conftest import test_case as report_case
-from tests.test_pqmeencounter_creation import (
-    ENCOUNTER_ROW_NUMBER,
-    EncounterDataError,
-    _applicant_name,
-    _applicant_table_name,
-    _contains_display_text,
-    _field,
-    _fill_applicant_details,
-    _fill_insurance_details,
-    _fill_injury_details,
-    _fill_party_details,
-    _fill_text,
-    _find_upload_file,
-    _format_ui_date,
-    _handle_generated_document_tab,
-    _open_new_encounter,
-    _open_view_encounters,
-    _physician_table_name,
-    _required_value,
-    _section,
-    _select_date,
-    _select_dropdown,
-    _select_searchable_dropdown,
-    _upload_documents,
-    _visible,
-)
 from utils.auth import authenticate_super_admin
 from utils.encounter_test_data import (
     PQMES_ENCOUNTER_SHEET_NAME,
     PQMES_ENCOUNTER_WORKBOOK_PATH,
     read_encounter_test_data,
 )
+
+
+_PQME_HELPERS_PATH = Path(__file__).with_name("test_pqme_encounter_creation.py")
+_PQME_HELPERS_SPEC = importlib.util.spec_from_file_location("encounter_creation_pqme_helpers", _PQME_HELPERS_PATH)
+assert _PQME_HELPERS_SPEC and _PQME_HELPERS_SPEC.loader, f"Could not load PQME helpers from {_PQME_HELPERS_PATH}"
+_pqme_helpers = importlib.util.module_from_spec(_PQME_HELPERS_SPEC)
+sys.modules[_PQME_HELPERS_SPEC.name] = _pqme_helpers
+_PQME_HELPERS_SPEC.loader.exec_module(_pqme_helpers)
+
+ENCOUNTER_ROW_NUMBER = _pqme_helpers.ENCOUNTER_ROW_NUMBER
+EncounterDataError = _pqme_helpers.EncounterDataError
+_applicant_name = _pqme_helpers._applicant_name
+_applicant_table_name = _pqme_helpers._applicant_table_name
+_contains_display_text = _pqme_helpers._contains_display_text
+_field = _pqme_helpers._field
+_fill_applicant_details = _pqme_helpers._fill_applicant_details
+_fill_insurance_details = _pqme_helpers._fill_insurance_details
+_fill_injury_details = _pqme_helpers._fill_injury_details
+_fill_party_details = _pqme_helpers._fill_party_details
+_fill_text = _pqme_helpers._fill_text
+_find_upload_file = _pqme_helpers._find_upload_file
+_format_ui_date = _pqme_helpers._format_ui_date
+_handle_generated_document_tab = _pqme_helpers._handle_generated_document_tab
+_open_new_encounter = _pqme_helpers._open_new_encounter
+_open_view_encounters = _pqme_helpers._open_view_encounters
+_physician_table_name = _pqme_helpers._physician_table_name
+_required_value = _pqme_helpers._required_value
+_section = _pqme_helpers._section
+_select_date = _pqme_helpers._select_date
+_select_dropdown = _pqme_helpers._select_dropdown
+_select_searchable_dropdown = _pqme_helpers._select_searchable_dropdown
+_upload_documents = _pqme_helpers._upload_documents
+_visible = _pqme_helpers._visible
 
 
 PQMES_REQUIRED_EXCEL_FIELDS = {
