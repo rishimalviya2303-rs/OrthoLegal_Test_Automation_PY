@@ -6,6 +6,7 @@ from utils.encounter_test_data import (
     DATE_FIELDS,
     ENCOUNTER_SECTIONS,
     ENCOUNTER_SHEET_NAME,
+    INTERPRETER_DETAILS_FIELDS,
     PQMES_ENCOUNTER_DETAILS_FIELDS,
     PQMES_ENCOUNTER_SHEET_NAME,
     create_encounter_test_data_workbook,
@@ -156,3 +157,47 @@ def test_format_encounter_date_value_rejects_unrecognized_date_text() -> None:
         assert "MM/DD/YYYY" in str(exc)
     else:
         raise AssertionError("Expected invalid Encounter date text to raise ValueError.")
+
+
+def test_create_encounter_workbook_with_interpreter_details(tmp_path) -> None:
+    workbook_path = tmp_path / "Encounter_Test_Data.xlsx"
+
+    create_encounter_test_data_workbook(
+        workbook_path, include_interpreter_details=True,
+    )
+    validate_encounter_workbook(workbook_path, include_interpreter_details=True)
+
+    workbook = load_workbook(workbook_path, data_only=True)
+    worksheet = workbook[ENCOUNTER_SHEET_NAME]
+
+    actual_columns = []
+    current_section = None
+    for column_index in range(1, worksheet.max_column + 1):
+        section = worksheet.cell(row=1, column=column_index).value
+        field = worksheet.cell(row=2, column=column_index).value
+        current_section = section or current_section
+        actual_columns.append((current_section, field))
+
+    assert worksheet.max_column == 87
+    assert actual_columns == encounter_columns(include_interpreter_details=True)
+
+    section_names = []
+    for sec, _ in actual_columns:
+        if not section_names or section_names[-1] != sec:
+            section_names.append(sec)
+
+    ud_idx = section_names.index("Upload Documents")
+    id_idx = section_names.index("Interpreter Details")
+    assert id_idx == ud_idx + 1
+
+    interpreter_fields = [
+        field for sec, field in actual_columns if sec == "Interpreter Details"
+    ]
+    assert interpreter_fields == list(INTERPRETER_DETAILS_FIELDS)
+
+    encounter_data = read_encounter_test_data(workbook_path=workbook_path)
+    assert "Interpreter Details" in encounter_data
+    assert list(encounter_data["Interpreter Details"]) == list(INTERPRETER_DETAILS_FIELDS)
+
+    workbook.close()
+

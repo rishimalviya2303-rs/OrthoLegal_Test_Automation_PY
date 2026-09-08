@@ -15,7 +15,7 @@ from utils.encounter_test_data import (
 )
 
 
-_PQME_HELPERS_PATH = Path(__file__).with_name("test_pqme_encounter_creation.py")
+_PQME_HELPERS_PATH = Path(__file__).with_name("test_pqme_encounter_creation_without_interpreter.py")
 _PQME_HELPERS_SPEC = importlib.util.spec_from_file_location("encounter_creation_pqme_helpers", _PQME_HELPERS_PATH)
 assert _PQME_HELPERS_SPEC and _PQME_HELPERS_SPEC.loader, f"Could not load PQME helpers from {_PQME_HELPERS_PATH}"
 _pqme_helpers = importlib.util.module_from_spec(_PQME_HELPERS_SPEC)
@@ -211,10 +211,10 @@ def _validate_pqmer_encounter_row(page: Page, data: dict[str, dict[str, Any]]) -
 @report_case(
     test_case_id="SUPERADMIN_PQMER_ENCOUNTER_TC_001",
     module="Super Admin - PQMER Encounter Creation",
-    test_case_name="Create PQMER Encounter and Validate Encounter",
+    test_case_name="Create PQMER Encounter Without Interpreter and Validate Encounter",
     title=(
-        "Verify that if the Super Admin creates a PQMER encounter using valid Excel test data, "
-        "then the PQMER encounter is created successfully and the correct encounter details are "
+        "Verify that if the Super Admin creates a PQMER encounter without an interpreter using valid Excel test data, "
+        "then the encounter is created successfully and the correct encounter details are "
         "displayed in View Encounters."
     ),
     test_type="Positive",
@@ -242,20 +242,20 @@ def _validate_pqmer_encounter_row(page: Page, data: dict[str, dict[str, Any]]) -
     test_data=(
         "PQMER Encounter data row 3 from test_data/PQMER_Encounter_Test_Data.xlsx, "
         "worksheet Encounter_Test_Data, and upload files from test_data/encounterfiles. "
-        "Super Admin password and verification PIN are not reported."
+        "Interpreter Details are not used. Super Admin password and verification PIN are not reported."
     ),
     expected_result=(
-        "The Super Admin should be able to create a PQMER Encounter using the data provided in the "
+        "The Super Admin should be able to create a PQMER Encounter without an interpreter using the data provided in the "
         "PQMER Encounter Excel test-data sheet, and after successful creation the correct PQMER "
         "Encounter details should be displayed in View Encounters."
     ),
     actual_result=(
-        "The Super Admin created the PQMER Encounter from Excel data, completed the required save "
+        "The Super Admin created the PQMER Encounter without an interpreter from Excel data, completed the required save "
         "workflow, returned to View Encounters, and validated the created row against the expected "
         "Applicant, Physician, Encounter Type, Evaluation Type, and Appointment Date."
     ),
 )
-def test_create_pqmer_encounter_and_validate_encounter(page: Page) -> None:
+def test_create_pqmer_encounter_without_interpreter_and_validate_encounter(page: Page) -> None:
     stage = "reading PQMER Encounter Excel data"
     try:
         encounter_data = read_encounter_test_data(
@@ -311,7 +311,7 @@ def test_create_pqmer_encounter_and_validate_encounter(page: Page) -> None:
         stage = "validating the created PQMER Encounter row"
         actual_values = _validate_pqmer_encounter_row(app_page, encounter_data)
         print(
-            "Created PQMER Encounter validated: "
+            "Created PQMER Encounter (Without Interpreter) validated: "
             f"Applicant expected={actual_values['Applicant Name']}; "
             f"Applicant actual={actual_values['Applicant Name Actual']}; "
             f"Physician expected={actual_values['Physician']}; "
@@ -329,5 +329,6 @@ def test_create_pqmer_encounter_and_validate_encounter(page: Page) -> None:
         raise
     except Exception as exc:
         raise AssertionError(
-            f"Create PQMER Encounter and Validate Encounter failed while {stage} ({type(exc).__name__})."
+            f"Create PQMER Encounter Without Interpreter and Validate Encounter failed while {stage} ({type(exc).__name__})."
         ) from None
+

@@ -22,6 +22,16 @@ REFLEX_PQMES_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "Reflex_PQME
 REFLEX_PQMES_ENCOUNTER_SHEET_NAME = "Reflex_PQMES_Encounter_Test_Dat"
 PQMED_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "PQMED_Encounter_Test_Data.xlsx"
 PQMED_ENCOUNTER_SHEET_NAME = "PQMED_Encounter_Test_Data"
+AME_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "AME_Encounter_Test_Data.xlsx"
+AME_ENCOUNTER_SHEET_NAME = "AME_Encounter_Test_Data"
+AMER_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "AMER_Encounter_Test_Data.xlsx"
+AMER_ENCOUNTER_SHEET_NAME = "AMER_Encounter_Test_Data"
+AMES_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "AMES_Encounter_Test_Data.xlsx"
+AMES_ENCOUNTER_SHEET_NAME = "AMES_Encounter_Test_Data"
+REFLEX_AMES_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "Reflex_AMES_Encounter_Test_Data.xlsx"
+REFLEX_AMES_ENCOUNTER_SHEET_NAME = "Reflex_AMES_Encounter_Test_Data"
+AMED_ENCOUNTER_WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "AMED_Encounter_Test_Data.xlsx"
+AMED_ENCOUNTER_SHEET_NAME = "AMED_Encounter_Test_Data"
 
 PQME_ENCOUNTER_DETAILS_FIELDS = (
     "Physician",
@@ -57,6 +67,14 @@ REFLEX_PQMES_ENCOUNTER_DETAILS_FIELDS = (
     "Requesting Party",
 )
 
+REFLEX_AMES_ENCOUNTER_DETAILS_FIELDS = (
+    "Physician",
+    "Medical Evaluation Type",
+    "Encounter Type",
+    "Date of Receipt",
+    "Requesting Party",
+)
+
 PQMED_ENCOUNTER_DETAILS_FIELDS = (
     "Physician",
     "Medical Evaluation Type",
@@ -70,6 +88,49 @@ PQMED_ENCOUNTER_DETAILS_FIELDS = (
     "City",
     "State",
     "Zip",
+)
+
+AMED_ENCOUNTER_DETAILS_FIELDS = (
+    "Physician",
+    "Medical Evaluation Type",
+    "Encounter Type",
+    "Date of Appointment Call",
+    "Appointment Date and Time",
+    "Requesting Party",
+    "Address Line 1",
+    "Address Line 2",
+    "City",
+    "State",
+    "Zip",
+)
+
+AME_ENCOUNTER_DETAILS_FIELDS = (
+    "Physician",
+    "Medical Evaluation Type",
+    "Encounter Type",
+    "Date of Appointment Call",
+    "Appointment Date and Time",
+    "Requesting Party",
+    "Examination Address",
+    "City",
+    "State",
+    "Zip",
+    "Evaluation Type",
+)
+
+AMES_ENCOUNTER_DETAILS_FIELDS = (
+    "Physician",
+    "Medical Evaluation Type",
+    "Encounter Type",
+    "Date of Cover Letter",
+    "Date of Declaration",
+    "Requesting Party",
+)
+
+INTERPRETER_DETAILS_FIELDS = (
+    "Language",
+    "Vendor Name",
+    "Vendor Phone",
 )
 
 ENCOUNTER_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -201,21 +262,34 @@ DATETIME_FIELDS = {
 
 def encounter_sections(
     encounter_details_fields: tuple[str, ...] = PQME_ENCOUNTER_DETAILS_FIELDS,
+    include_interpreter_details: bool = False,
 ) -> tuple[tuple[str, tuple[str, ...]], ...]:
-    """Return Encounter sections with a configurable Encounter Details field list."""
-    return tuple(
-        (section, encounter_details_fields if section == "Encounter Details" else fields)
-        for section, fields in ENCOUNTER_SECTIONS
-    )
+    """Return Encounter sections with a configurable Encounter Details field list.
+
+    When *include_interpreter_details* is ``True`` the ``Interpreter Details``
+    section is inserted immediately after ``Upload Documents``.
+    """
+    sections: list[tuple[str, tuple[str, ...]]] = []
+    for section, fields in ENCOUNTER_SECTIONS:
+        if section == "Encounter Details":
+            sections.append((section, encounter_details_fields))
+        else:
+            sections.append((section, fields))
+        if include_interpreter_details and section == "Upload Documents":
+            sections.append(("Interpreter Details", INTERPRETER_DETAILS_FIELDS))
+    return tuple(sections)
 
 
 def encounter_columns(
     encounter_details_fields: tuple[str, ...] = PQME_ENCOUNTER_DETAILS_FIELDS,
+    include_interpreter_details: bool = False,
 ) -> list[tuple[str, str]]:
     """Return Encounter columns as ordered (section, field) pairs."""
     return [
         (section, field)
-        for section, fields in encounter_sections(encounter_details_fields)
+        for section, fields in encounter_sections(
+            encounter_details_fields, include_interpreter_details=include_interpreter_details
+        )
         for field in fields
     ]
 
@@ -224,6 +298,7 @@ def create_encounter_test_data_workbook(
     workbook_path: Path = ENCOUNTER_WORKBOOK_PATH,
     sheet_name: str = ENCOUNTER_SHEET_NAME,
     encounter_details_fields: tuple[str, ...] = PQME_ENCOUNTER_DETAILS_FIELDS,
+    include_interpreter_details: bool = False,
 ) -> Path:
     """Create the blank Encounter Creation test-data workbook."""
     workbook_path.parent.mkdir(parents=True, exist_ok=True)
@@ -240,7 +315,9 @@ def create_encounter_test_data_workbook(
     center = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     column_index = 1
-    for section, fields in encounter_sections(encounter_details_fields):
+    for section, fields in encounter_sections(
+        encounter_details_fields, include_interpreter_details=include_interpreter_details
+    ):
         start_column = column_index
         for field in fields:
             section_cell = worksheet.cell(row=1, column=column_index, value=section)
@@ -371,6 +448,7 @@ def validate_encounter_workbook(
     workbook_path: Path = ENCOUNTER_WORKBOOK_PATH,
     sheet_name: str = ENCOUNTER_SHEET_NAME,
     encounter_details_fields: tuple[str, ...] = PQME_ENCOUNTER_DETAILS_FIELDS,
+    include_interpreter_details: bool = False,
 ) -> None:
     """Validate workbook headers against the Encounter Creation schema."""
     if not workbook_path.exists():
@@ -383,7 +461,9 @@ def validate_encounter_workbook(
 
     worksheet = workbook[sheet_name]
     actual_columns = [(section, field) for _, section, field in _read_header_columns(worksheet)]
-    expected_columns = encounter_columns(encounter_details_fields)
+    expected_columns = encounter_columns(
+        encounter_details_fields, include_interpreter_details=include_interpreter_details
+    )
     workbook.close()
 
     if actual_columns != expected_columns:
@@ -414,7 +494,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create Encounter test-data workbooks.")
     parser.add_argument(
         "--template",
-        choices=("pqme", "pqmer", "pqmes", "pqmed", "reflex-pqmes"),
+        choices=("pqme", "pqmer", "pqmes", "pqmed", "reflex-pqmes", "ame", "amer", "ames", "reflex-ames", "amed"),
         default="pqme",
         help="Encounter workbook template to generate.",
     )
@@ -447,24 +527,91 @@ if __name__ == "__main__":
             workbook_path=PQMED_ENCOUNTER_WORKBOOK_PATH,
             sheet_name=PQMED_ENCOUNTER_SHEET_NAME,
             encounter_details_fields=PQMED_ENCOUNTER_DETAILS_FIELDS,
+            include_interpreter_details=True,
         )
         validate_encounter_workbook(
             output_path,
             sheet_name=PQMED_ENCOUNTER_SHEET_NAME,
             encounter_details_fields=PQMED_ENCOUNTER_DETAILS_FIELDS,
+            include_interpreter_details=True,
         )
     elif args.template == "pqmer":
         output_path = create_encounter_test_data_workbook(
             workbook_path=PQMER_ENCOUNTER_WORKBOOK_PATH,
             sheet_name=PQMER_ENCOUNTER_SHEET_NAME,
             encounter_details_fields=PQME_ENCOUNTER_DETAILS_FIELDS,
+            include_interpreter_details=True,
         )
         validate_encounter_workbook(
             output_path,
             sheet_name=PQMER_ENCOUNTER_SHEET_NAME,
             encounter_details_fields=PQME_ENCOUNTER_DETAILS_FIELDS,
+            include_interpreter_details=True,
+        )
+    elif args.template == "ame":
+        output_path = create_encounter_test_data_workbook(
+            workbook_path=AME_ENCOUNTER_WORKBOOK_PATH,
+            sheet_name=AME_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=AME_ENCOUNTER_DETAILS_FIELDS,
+            include_interpreter_details=True,
+        )
+        validate_encounter_workbook(
+            output_path,
+            sheet_name=AME_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=AME_ENCOUNTER_DETAILS_FIELDS,
+            include_interpreter_details=True,
+        )
+    elif args.template == "amer":
+        output_path = create_encounter_test_data_workbook(
+            workbook_path=AMER_ENCOUNTER_WORKBOOK_PATH,
+            sheet_name=AMER_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=AME_ENCOUNTER_DETAILS_FIELDS,
+            include_interpreter_details=True,
+        )
+        validate_encounter_workbook(
+            output_path,
+            sheet_name=AMER_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=AME_ENCOUNTER_DETAILS_FIELDS,
+            include_interpreter_details=True,
+        )
+    elif args.template == "ames":
+        output_path = create_encounter_test_data_workbook(
+            workbook_path=AMES_ENCOUNTER_WORKBOOK_PATH,
+            sheet_name=AMES_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=AMES_ENCOUNTER_DETAILS_FIELDS,
+        )
+        validate_encounter_workbook(
+            output_path,
+            sheet_name=AMES_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=AMES_ENCOUNTER_DETAILS_FIELDS,
+        )
+    elif args.template == "reflex-ames":
+        output_path = create_encounter_test_data_workbook(
+            workbook_path=REFLEX_AMES_ENCOUNTER_WORKBOOK_PATH,
+            sheet_name=REFLEX_AMES_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=REFLEX_AMES_ENCOUNTER_DETAILS_FIELDS,
+        )
+        validate_encounter_workbook(
+            output_path,
+            sheet_name=REFLEX_AMES_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=REFLEX_AMES_ENCOUNTER_DETAILS_FIELDS,
+        )
+    elif args.template == "amed":
+        output_path = create_encounter_test_data_workbook(
+            workbook_path=AMED_ENCOUNTER_WORKBOOK_PATH,
+            sheet_name=AMED_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=AMED_ENCOUNTER_DETAILS_FIELDS,
+            include_interpreter_details=True,
+        )
+        validate_encounter_workbook(
+            output_path,
+            sheet_name=AMED_ENCOUNTER_SHEET_NAME,
+            encounter_details_fields=AMED_ENCOUNTER_DETAILS_FIELDS,
+            include_interpreter_details=True,
         )
     else:
-        output_path = create_encounter_test_data_workbook()
-        validate_encounter_workbook(output_path)
+        output_path = create_encounter_test_data_workbook(
+            include_interpreter_details=True,
+        )
+        validate_encounter_workbook(output_path, include_interpreter_details=True)
     print(f"Created {output_path}")

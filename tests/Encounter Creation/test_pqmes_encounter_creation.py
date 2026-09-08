@@ -15,7 +15,7 @@ from utils.encounter_test_data import (
 )
 
 
-_PQME_HELPERS_PATH = Path(__file__).with_name("test_pqme_encounter_creation.py")
+_PQME_HELPERS_PATH = Path(__file__).with_name("test_pqme_encounter_creation_without_interpreter.py")
 _PQME_HELPERS_SPEC = importlib.util.spec_from_file_location("encounter_creation_pqme_helpers", _PQME_HELPERS_PATH)
 assert _PQME_HELPERS_SPEC and _PQME_HELPERS_SPEC.loader, f"Could not load PQME helpers from {_PQME_HELPERS_PATH}"
 _pqme_helpers = importlib.util.module_from_spec(_PQME_HELPERS_SPEC)

@@ -4,6 +4,7 @@ from typing import Any
 import pytest
 
 from reporting import initialize_report, record_test_case
+from utils.test_command_registry import sync_test_command_registry
 
 
 def test_case(**metadata: Any) -> Callable:
@@ -15,6 +16,7 @@ def test_case(**metadata: Any) -> Callable:
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:
+    sync_test_command_registry()
     initialize_report()
 
 

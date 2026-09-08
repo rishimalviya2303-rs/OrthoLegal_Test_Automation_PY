@@ -49,10 +49,13 @@ OrthoLegal_Automation/
 |   |-- test_excel_reader.py
 |   |-- test_super_admin_login.py
 |   |-- Encounter Creation/
-|   |   |-- test_pqme_encounter_creation.py
-|   |   |-- test_pqmer_encounter_creation.py
+|   |   |-- test_pqme_encounter_creation_without_interpreter.py
+|   |   |-- test_pqme_encounter_creation_with_interpreter.py
+|   |   |-- test_pqmer_encounter_creation_without_interpreter.py
+|   |   |-- test_pqmer_encounter_creation_with_interpreter.py
 |   |   |-- test_pqmes_encounter_creation.py
-|   |   |-- test_pqmed_encounter_creation.py
+|   |   |-- test_pqmed_encounter_creation_without_interpreter.py
+|   |   |-- test_pqmed_encounter_creation_with_interpreter.py
 |   |   `-- test_reflex_pqmes_encounter_creation.py
 |   `-- User Creation/
 |       |-- test_case_manager_creation.py
@@ -361,10 +364,13 @@ tests\Encounter Creation\
 
 | Encounter Type | Test File | Data Source | Notes |
 | --- | --- | --- | --- |
-| PQME | `test_pqme_encounter_creation.py` | `PQME_Encounter_Test_Data.xlsx` | Uses appointment call/date-time fields, Examination Address, Evaluation Type, and document uploads |
-| PQMER | `test_pqmer_encounter_creation.py` | `PQMER_Encounter_Test_Data.xlsx` | Uses the same Encounter Details field structure as PQME |
+| PQME (Without Interpreter) | `test_pqme_encounter_creation_without_interpreter.py` | `PQME_Encounter_Test_Data.xlsx` | Uses appointment call/date-time fields, Examination Address, Evaluation Type, and document uploads; does not enable Interpreter Details |
+| PQME (With Interpreter) | `test_pqme_encounter_creation_with_interpreter.py` | `PQME_Encounter_Test_Data.xlsx` | Same flow as Without Interpreter but additionally checks Interpreter Required and fills Language, Vendor Name, and Vendor Phone from the Interpreter Details section |
+| PQMER (Without Interpreter) | `test_pqmer_encounter_creation_without_interpreter.py` | `PQMER_Encounter_Test_Data.xlsx` | Uses the same Encounter Details field structure as PQME, does not use Interpreter Details |
+| PQMER (With Interpreter) | `test_pqmer_encounter_creation_with_interpreter.py` | `PQMER_Encounter_Test_Data.xlsx` | Same flow as Without Interpreter but additionally checks Interpreter Required and fills Interpreter Details |
 | PQMES | `test_pqmes_encounter_creation.py` | `PQMES_Encounter_Test_Data.xlsx` | Uses Date of Cover Letter and Date of Declaration |
-| PQMED | `test_pqmed_encounter_creation.py` | `PQMED_Encounter_Test_Data.xlsx` | Uses appointment date/time and direct Encounter address fields |
+| PQMED (Without Interpreter) | `test_pqmed_encounter_creation_without_interpreter.py` | `PQMED_Encounter_Test_Data.xlsx` | Uses appointment date/time and direct Encounter address fields, does not use Interpreter Details |
+| PQMED (With Interpreter) | `test_pqmed_encounter_creation_with_interpreter.py` | `PQMED_Encounter_Test_Data.xlsx` | Same flow as Without Interpreter but additionally checks Interpreter Required and fills Interpreter Details |
 | Reflex PQMES | `test_reflex_pqmes_encounter_creation.py` | `Reflex_PQMES_Encounter_Test_Data.xlsx` | Uses Date of Receipt instead of PQMES cover-letter/declaration dates |
 
 ## 11. Standalone Tests
@@ -421,10 +427,13 @@ cd "C:\Rishi Files\OrthoLegal_Automation"
 
 | Encounter Type | Command |
 | --- | --- |
-| PQME | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqme_encounter_creation.py" --headed -v` |
-| PQMER | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqmer_encounter_creation.py" --headed -v` |
+| PQME (Without Interpreter) | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqme_encounter_creation_without_interpreter.py" --headed -v` |
+| PQME (With Interpreter) | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqme_encounter_creation_with_interpreter.py" --headed -v` |
+| PQMER (Without Interpreter) | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqmer_encounter_creation_without_interpreter.py" --headed -v` |
+| PQMER (With Interpreter) | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqmer_encounter_creation_with_interpreter.py" --headed -v` |
 | PQMES | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqmes_encounter_creation.py" --headed -v` |
-| PQMED | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqmed_encounter_creation.py" --headed -v` |
+| PQMED (Without Interpreter) | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqmed_encounter_creation_without_interpreter.py" --headed -v` |
+| PQMED (With Interpreter) | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_pqmed_encounter_creation_with_interpreter.py" --headed -v` |
 | Reflex PQMES | `.\.venv\Scripts\python.exe -m pytest "tests\Encounter Creation\test_reflex_pqmes_encounter_creation.py" --headed -v` |
 
 ### Run Standalone Tests
@@ -435,6 +444,30 @@ cd "C:\Rishi Files\OrthoLegal_Automation"
 | Case Manager Phone Update | `.\.venv\Scripts\python.exe -m pytest tests\test_case_manager_phone_update.py --headed -v` |
 | Excel Reader Unit Tests | `.\.venv\Scripts\python.exe -m pytest tests\test_excel_reader.py -v` |
 | Encounter Test Data Unit Tests | `.\.venv\Scripts\python.exe -m pytest tests\test_encounter_test_data.py -v` |
+
+### Test Execution Command Registry
+
+The test command registry workbook is generated at:
+
+```text
+test_data/Test_Execution_Commands.xlsx
+```
+
+Worksheet:
+
+```text
+Test Commands
+```
+
+It contains `Test Name` and `Run Command` columns. Each command is complete and can be copied directly from Excel into the VS Code or PowerShell terminal from the project root.
+
+The registry automatically synchronizes with the current `tests/` directory whenever pytest starts. It is generated by safe static discovery and does not execute tests, launch browsers, create users, create encounters, or perform logins.
+
+Manual synchronization command:
+
+```powershell
+.\.venv\Scripts\python.exe utils\test_command_registry.py
+```
 
 ## 13. Execution Reporting
 
@@ -489,10 +522,13 @@ Execution reports must not contain passwords, verification PINs, tokens, cookies
 | User Creation | Record Reviewer Manager | `tests\User Creation\test_record_reviewer_manager_creation.py` | `Users_Test_Data.xlsx` | Automated |
 | User Creation | Report Finalizer | `tests\User Creation\test_report_finalizer_creation.py` | `Users_Test_Data.xlsx` | Automated |
 | User Profile | Case Manager Phone Update | `tests\test_case_manager_phone_update.py` | `Users_Test_Data.xlsx` | Automated |
-| Encounter Creation | PQME | `tests\Encounter Creation\test_pqme_encounter_creation.py` | `PQME_Encounter_Test_Data.xlsx` | Automated |
-| Encounter Creation | PQMER | `tests\Encounter Creation\test_pqmer_encounter_creation.py` | `PQMER_Encounter_Test_Data.xlsx` | Automated |
+| Encounter Creation | PQME (Without Interpreter) | `tests\Encounter Creation\test_pqme_encounter_creation_without_interpreter.py` | `PQME_Encounter_Test_Data.xlsx` | Automated |
+| Encounter Creation | PQME (With Interpreter) | `tests\Encounter Creation\test_pqme_encounter_creation_with_interpreter.py` | `PQME_Encounter_Test_Data.xlsx` | Automated |
+| Encounter Creation | PQMER (Without Interpreter) | `tests\Encounter Creation\test_pqmer_encounter_creation_without_interpreter.py` | `PQMER_Encounter_Test_Data.xlsx` | Automated |
+| Encounter Creation | PQMER (With Interpreter) | `tests\Encounter Creation\test_pqmer_encounter_creation_with_interpreter.py` | `PQMER_Encounter_Test_Data.xlsx` | Automated |
 | Encounter Creation | PQMES | `tests\Encounter Creation\test_pqmes_encounter_creation.py` | `PQMES_Encounter_Test_Data.xlsx` | Automated |
-| Encounter Creation | PQMED | `tests\Encounter Creation\test_pqmed_encounter_creation.py` | `PQMED_Encounter_Test_Data.xlsx` | Automated |
+| Encounter Creation | PQMED (Without Interpreter) | `tests\Encounter Creation\test_pqmed_encounter_creation_without_interpreter.py` | `PQMED_Encounter_Test_Data.xlsx` | Automated |
+| Encounter Creation | PQMED (With Interpreter) | `tests\Encounter Creation\test_pqmed_encounter_creation_with_interpreter.py` | `PQMED_Encounter_Test_Data.xlsx` | Automated |
 | Encounter Creation | Reflex PQMES | `tests\Encounter Creation\test_reflex_pqmes_encounter_creation.py` | `Reflex_PQMES_Encounter_Test_Data.xlsx` | Automated |
 | Utility | Excel Reader | `tests\test_excel_reader.py` | temporary workbook fixture | Automated |
 | Utility | Encounter Test Data | `tests\test_encounter_test_data.py` | temporary workbook fixture | Automated |

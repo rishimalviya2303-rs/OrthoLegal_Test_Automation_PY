@@ -610,11 +610,11 @@ def _validate_encounter_row(page: Page, data: dict[str, dict[str, Any]]) -> dict
 @report_case(
     test_case_id="SUPERADMIN_PQME_ENCOUNTER_TC_001",
     module="Super Admin - PQME Encounter Creation",
-    test_case_name="Create PQME Encounter and Validate Encounter",
+    test_case_name="Create PQME Encounter Without Interpreter and Validate Encounter",
     title=(
-        "Verify that if the Super Admin creates a PQME encounter using valid Excel test data, "
-        "then the encounter is created successfully and the correct encounter details are "
-        "displayed in View Encounters."
+        "Verify that if the Super Admin creates a PQME encounter without an interpreter "
+        "using valid Excel test data, then the encounter is created successfully and the "
+        "correct encounter details are displayed in View Encounters."
     ),
     test_type="Positive",
     preconditions=(
@@ -642,22 +642,25 @@ def _validate_encounter_row(page: Page, data: dict[str, dict[str, Any]]) -> dict
     test_data=(
         "PQME Encounter data row 3 from test_data/PQME_Encounter_Test_Data.xlsx, "
         "worksheet PQME_Encounter_Test_Data, and upload files from "
-        "test_data/encounterfiles. Super Admin password and verification PIN are not reported."
+        "test_data/encounterfiles. Interpreter Details are not used. "
+        "Super Admin password and verification PIN are not reported."
     ),
     expected_result=(
-        "The Super Admin should be able to create a PQME Encounter using the data provided in the "
-        "PQME Encounter Excel test-data sheet. After completing the form, uploading the required "
-        "documents, and saving the PQME Encounter through the Recipients step, the Encounter should "
-        "be created successfully and should appear in View Encounters with the correct Applicant "
-        "name, Physician, Encounter Type, Evaluation Type, and Appointment Date."
+        "The Super Admin should be able to create a PQME Encounter without an interpreter "
+        "using the data provided in the PQME Encounter Excel test-data sheet. After completing "
+        "the form, uploading the required documents, and saving the PQME Encounter through the "
+        "Recipients step, the Encounter should be created successfully and should appear in "
+        "View Encounters with the correct Applicant name, Physician, Encounter Type, "
+        "Evaluation Type, and Appointment Date."
     ),
     actual_result=(
-        "The Super Admin created the PQME Encounter from Excel data, completed the Recipients step, "
-        "returned to View Encounters, and validated the created row against the expected "
-        "Applicant name, Physician, Encounter Type, Evaluation Type, and Appointment Date."
+        "The Super Admin created the PQME Encounter without an interpreter from Excel data, "
+        "completed the Recipients step, returned to View Encounters, and validated the "
+        "created row against the expected Applicant name, Physician, Encounter Type, "
+        "Evaluation Type, and Appointment Date."
     ),
 )
-def test_create_encounter_and_validate_encounter(page: Page) -> None:
+def test_create_pqme_encounter_without_interpreter_and_validate_encounter(page: Page) -> None:
     stage = "reading Encounter Excel data"
     try:
         encounter_data = read_encounter_test_data(
@@ -711,7 +714,7 @@ def test_create_encounter_and_validate_encounter(page: Page) -> None:
         stage = "validating the created Encounter row"
         actual_values = _validate_encounter_row(app_page, encounter_data)
         print(
-            "Created Encounter validated: "
+            "Created PQME Encounter (Without Interpreter) validated: "
             f"Applicant={actual_values['Applicant Name']}; "
             f"Physician={actual_values['Physician']}; "
             f"Encounter Type={actual_values['Encounter Type']}; "
@@ -725,5 +728,6 @@ def test_create_encounter_and_validate_encounter(page: Page) -> None:
         raise
     except Exception as exc:
         raise AssertionError(
-            f"Create PQME Encounter and Validate Encounter failed while {stage} ({type(exc).__name__})."
+            f"Create PQME Encounter Without Interpreter and Validate Encounter "
+            f"failed while {stage} ({type(exc).__name__})."
         ) from None
