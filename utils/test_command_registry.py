@@ -18,7 +18,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TESTS_DIR = PROJECT_ROOT / "tests"
 WORKBOOK_PATH = PROJECT_ROOT / "test_data" / "Test_Execution_Commands.xlsx"
 WORKSHEET_NAME = "Test Commands"
-COMMAND_PREFIX = r".\.venv\Scripts\python.exe -m pytest"
+COMMAND_PREFIX = "./.venv/Scripts/python.exe -m pytest"
 COMMAND_SUFFIX = "--headed -v -s"
 SECRET_PATTERNS = (
     re.compile(r"password", re.I),
@@ -37,7 +37,7 @@ class CommandRegistryEntry:
 
 
 def _windows_relative_path(path: Path) -> str:
-    return str(path.relative_to(PROJECT_ROOT)).replace("/", "\\")
+    return path.relative_to(PROJECT_ROOT).as_posix()
 
 
 def _read_ast(path: Path) -> ast.Module:

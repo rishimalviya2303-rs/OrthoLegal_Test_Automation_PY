@@ -131,6 +131,9 @@ def test_read_encounter_test_data_formats_date_fields_as_mm_dd_yyyy(tmp_path) ->
         ("Applicant Details", "Date of Birth"),
         ("Injury Details", "Date of Injury"),
         ("Encounter Details", "Date of Appointment Call"),
+        ("Encounter Details", "Date of Cover Letter"),
+        ("Encounter Details", "Date of Declaration"),
+        ("Encounter Details", "Date of Receipt"),
     }
 
 
@@ -200,4 +203,3 @@ def test_create_encounter_workbook_with_interpreter_details(tmp_path) -> None:
     assert list(encounter_data["Interpreter Details"]) == list(INTERPRETER_DETAILS_FIELDS)
 
     workbook.close()
-

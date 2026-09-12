@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from typing import Any
+import warnings
 
 import pytest
 
@@ -16,7 +17,12 @@ def test_case(**metadata: Any) -> Callable:
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:
-    sync_test_command_registry()
+    try:
+        sync_test_command_registry()
+    except RuntimeError as exc:
+        if "Test_Execution_Commands.xlsx" not in str(exc):
+            raise
+        warnings.warn(str(exc), RuntimeWarning, stacklevel=2)
     initialize_report()
 
 
