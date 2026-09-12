@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
@@ -13,6 +13,7 @@ from utils.encounter_test_data import (
     PQME_ENCOUNTER_WORKBOOK_PATH,
     read_encounter_test_data,
 )
+from utils.business_days import calculate_report_due_date
 from utils.excel_reader import PROJECT_ROOT
 
 
@@ -606,6 +607,46 @@ def _open_new_encounter(page: Page) -> None:
     expect(page.get_by_text(re.compile(r"^\s*Applicant details\s*$", re.I))).to_be_visible()
 
 
+def _parse_ui_date(value: str) -> date:
+    """Parse a UI date string (MM/DD/YYYY) into a date object."""
+    normalized = _format_ui_date(value)
+    return datetime.strptime(normalized, "%m/%d/%Y").date()
+
+
+def _extract_row_cell_dates(row_locator: Locator, expected_eval_date_str: str) -> tuple[str, str]:
+    """Extract Date of Evaluation and Report Due Date text from the matched row."""
+    cells = row_locator.locator("td")
+    date_pattern = re.compile(r"\b\d{1,2}/\d{1,2}/\d{4}\b")
+    candidate_dates: list[str] = []
+
+    for index in range(cells.count()):
+        candidate_dates.extend(date_pattern.findall(cells.nth(index).inner_text().strip()))
+
+    expected_eval_normalized = _format_ui_date(expected_eval_date_str)
+    date_of_evaluation = ""
+    report_due_date = ""
+
+    for candidate in candidate_dates:
+        if _format_ui_date(candidate) == expected_eval_normalized:
+            date_of_evaluation = candidate
+            break
+
+    for candidate in candidate_dates:
+        candidate_normalized = _format_ui_date(candidate)
+        if candidate_normalized == expected_eval_normalized:
+            continue
+        try:
+            candidate_date = datetime.strptime(candidate_normalized, "%m/%d/%Y").date()
+            eval_date = datetime.strptime(expected_eval_normalized, "%m/%d/%Y").date()
+            if 25 <= (candidate_date - eval_date).days <= 35:
+                report_due_date = candidate
+                break
+        except ValueError:
+            continue
+
+    return date_of_evaluation, report_due_date
+
+
 def _validate_encounter_row(page: Page, data: dict[str, dict[str, Any]]) -> dict[str, str]:
     _open_view_encounters(page)
     applicant_name = _applicant_name(data)
@@ -614,7 +655,13 @@ def _validate_encounter_row(page: Page, data: dict[str, dict[str, Any]]) -> dict
     physician_table_name = _physician_table_name(physician)
     encounter_type = _required_value(data, "Encounter Details", "Encounter Type")
     evaluation_type = _optional_value(data, "Encounter Details", "Evaluation Type")
-    appointment_date = _format_ui_date(_required_value(data, "Encounter Details", "Appointment Date and Time"))
+    appointment_value = _required_value(data, "Encounter Details", "Appointment Date and Time")
+    appointment_date = _format_ui_date(appointment_value)
+    evaluation_date_obj = _parse_ui_date(appointment_value)
+    expected_report_due_date_obj = calculate_report_due_date(evaluation_date_obj)
+    base_plus_30 = evaluation_date_obj + timedelta(days=30)
+    expected_eval_date_str = evaluation_date_obj.strftime("%m/%d/%Y")
+    expected_due_date_str = expected_report_due_date_obj.strftime("%m/%d/%Y")
 
     search = page.get_by_placeholder(re.compile("Applicant name", re.I)).or_(
         page.get_by_role("textbox", name=re.compile("Applicant name", re.I))
@@ -626,14 +673,58 @@ def _validate_encounter_row(page: Page, data: dict[str, dict[str, Any]]) -> dict
         has_text=appointment_date
     )
     expect(_visible(row)).to_be_visible(timeout=30000)
+    matched_row = _visible(row)
 
-    row_text = _visible(row).inner_text()
-    assert _contains_display_text(row_text, applicant_table_name), "Created Encounter row does not show the expected Applicant name."
-    assert _contains_display_text(row_text, physician_table_name), "Created Encounter row does not show the expected Physician."
-    assert _contains_display_text(row_text, encounter_type), "Created Encounter row does not show the expected Encounter Type."
+    row_text = matched_row.inner_text()
+    assert _contains_display_text(row_text, applicant_table_name), (
+        f"Applicant Name mismatch. Expected '{applicant_table_name}', "
+        f"but the row text does not contain it. Row text: {row_text!r}"
+    )
+    assert _contains_display_text(row_text, physician_table_name), (
+        f"Physician mismatch. Expected '{physician_table_name}', "
+        f"but the row text does not contain it. Row text: {row_text!r}"
+    )
+    assert _contains_display_text(row_text, encounter_type), (
+        f"Encounter Type mismatch. Expected '{encounter_type}', "
+        f"but the row text does not contain it."
+    )
     if evaluation_type:
-        assert _contains_display_text(row_text, evaluation_type), "Created Encounter row does not show the expected Evaluation Type."
-    assert appointment_date in row_text, "Created Encounter row does not show the expected Appointment Date."
+        assert _contains_display_text(row_text, evaluation_type), (
+            f"Evaluation Type mismatch. Expected '{evaluation_type}', "
+            f"but the row text does not contain it."
+        )
+
+    actual_eval_date_str, actual_due_date_str = _extract_row_cell_dates(matched_row, appointment_value)
+    if actual_eval_date_str:
+        actual_eval_normalized = _format_ui_date(actual_eval_date_str)
+        assert actual_eval_normalized == expected_eval_date_str, (
+            f"Date of Evaluation mismatch. "
+            f"Expected {expected_eval_date_str}, found {actual_eval_normalized}."
+        )
+    else:
+        assert appointment_date in row_text, (
+            f"Date of Evaluation not found in row. "
+            f"Expected {expected_eval_date_str} to appear in the row text."
+        )
+
+    if actual_due_date_str:
+        actual_due_normalized = _format_ui_date(actual_due_date_str)
+        actual_due_date_obj = datetime.strptime(actual_due_normalized, "%m/%d/%Y").date()
+        assert actual_due_date_obj == expected_report_due_date_obj, (
+            f"Report Due Date mismatch. "
+            f"Evaluation Date: {expected_eval_date_str}, "
+            f"Base +30 Date: {base_plus_30.strftime('%m/%d/%Y')} ({base_plus_30.strftime('%A')}), "
+            f"Expected adjusted Due Date: {expected_due_date_str}, "
+            f"Actual: {actual_due_normalized}."
+        )
+    else:
+        assert expected_due_date_str in row_text, (
+            f"Report Due Date not found in row. "
+            f"Expected {expected_due_date_str} "
+            f"(Evaluation Date {expected_eval_date_str} + 30 days, adjusted). "
+            f"Row text: {row_text!r}"
+        )
+
     return {
         "Applicant Name": applicant_name,
         "Applicant Name Actual": applicant_table_name,
@@ -642,6 +733,9 @@ def _validate_encounter_row(page: Page, data: dict[str, dict[str, Any]]) -> dict
         "Encounter Type": encounter_type,
         "Evaluation Type": evaluation_type,
         "Appointment Date": appointment_date,
+        "Date of Evaluation": actual_eval_date_str or appointment_date,
+        "Expected Report Due Date": expected_due_date_str,
+        "Actual Report Due Date": actual_due_date_str or "(matched in row text)",
     }
 
 
@@ -674,7 +768,10 @@ def _validate_encounter_row(page: Page, data: dict[str, dict[str, Any]]) -> dict
         "11. Fill Applicant Attorney, Employer, Defense Attorney, and Insurance Company details.\n"
         "12. Save the Encounter and complete the Recipients popup.\n"
         "13. Handle the generated ANF/PDF tab and return to OrthoLegal.\n"
-        "14. Validate the created Encounter row in View Encounters."
+        "14. Search for the created Encounter in View Encounters by Applicant name.\n"
+        "15. Validate the Encounter row: Applicant Name, Physician, Encounter Type, "
+        "Date of Evaluation, and Report Due Date (Evaluation Date + 30 calendar days, "
+        "adjusted backward for weekends and U.S. federal holidays)."
     ),
     test_data=(
         "PQME Encounter data row 3 from test_data/PQME_Encounter_Test_Data.xlsx, "
@@ -685,14 +782,18 @@ def _validate_encounter_row(page: Page, data: dict[str, dict[str, Any]]) -> dict
     expected_result=(
         "The Super Admin should be able to create a PQME Encounter with the Interpreter "
         "Required option selected and valid Language, Vendor Name, and Vendor Phone values "
-        "from the PQME Encounter Excel test-data sheet, and the Encounter should be created "
-        "successfully."
+        "from the PQME Encounter Excel test-data sheet. After completing the form, uploading "
+        "the required documents, and saving the PQME Encounter through the Recipients step, "
+        "the Encounter should be created successfully and should appear in View Encounters "
+        "with the correct Applicant name, Physician, Encounter Type, Evaluation Type, Date "
+        "of Evaluation (matching the Appointment Date), and Report Due Date (Evaluation "
+        "Date + 30 calendar days, adjusted backward for weekends and U.S. federal holidays)."
     ),
     actual_result=(
         "The Super Admin created the PQME Encounter with Interpreter Details from Excel data, "
         "completed the Recipients step, returned to View Encounters, and validated the "
         "created row against the expected Applicant name, Physician, Encounter Type, "
-        "Evaluation Type, and Appointment Date."
+        "Evaluation Type, Date of Evaluation, and Report Due Date."
     ),
 )
 def test_create_pqme_encounter_with_interpreter_and_validate_encounter(page: Page) -> None:
@@ -766,6 +867,9 @@ def test_create_pqme_encounter_with_interpreter_and_validate_encounter(page: Pag
             f"Encounter Type={actual_values['Encounter Type']}; "
             f"Evaluation Type={actual_values['Evaluation Type']}; "
             f"Appointment Date={actual_values['Appointment Date']}; "
+            f"Date of Evaluation={actual_values['Date of Evaluation']}; "
+            f"Expected Report Due Date={actual_values['Expected Report Due Date']}; "
+            f"Actual Report Due Date={actual_values['Actual Report Due Date']}; "
             f"Strike Panel={strike_panel.name}; Attorney Demo={attorney_demo.name}; "
             f"Language={interpreter.get('Language')}; "
             f"Vendor Name={interpreter.get('Vendor Name')}; "
